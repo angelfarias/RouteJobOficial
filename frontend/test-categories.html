@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Categories</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .category { margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .subcategory { margin-left: 20px; background: #f5f5f5; }
+        .search-box { width: 300px; padding: 10px; margin: 20px 0; border: 1px solid #ddd; border-radius: 5px; }
+        .results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test Job Categories</h1>
+    
+    <div>
+        <h2>Search Categories</h2>
+        <input type="text" id="searchInput" class="search-box" placeholder="Buscar categorías (ej: tecnología, ventas, salud)">
+        <div id="searchResults" class="results"></div>
+    </div>
+
+    <div>
+        <h2>Popular Categories</h2>
+        <div id="popularCategories"></div>
+    </div>
+
+    <div>
+        <h2>All Categories Tree</h2>
+        <div id="categoryTree"></div>
+    </div>
+
+    <script type="module">
+        // Simple category API test
+        const API_BASE = 'http://localhost:3001';
+        
+        // Fallback categories (same as in the React app)
+        const fallbackCategories = [
+            { id: 'tech', name: 'Tecnología e Informática', totalVacancyCount: 150 },
+            { id: 'sales', name: 'Ventas y Comercial', totalVacancyCount: 200 },
+            { id: 'admin', name: 'Administración y Finanzas', totalVacancyCount: 180 },
+            { id: 'health', name: 'Salud y Medicina', totalVacancyCount: 120 },
+            { id: 'education', name: 'Educación y Capacitación', totalVacancyCount: 90 },
+            { id: 'construction', name: 'Construcción y Arquitectura', totalVacancyCount: 160 },
+            { id: 'gastronomy', name: 'Gastronomía y Turismo', totalVacancyCount: 140 },
+            { id: 'transport', name: 'Transporte y Logística', totalVacancyCount: 110 },
+            { id: 'marketing', name: 'Marketing y Comunicaciones', totalVacancyCount: 85 }
+        ];
+
+        async function searchCategories(query) {
+            try {
+                const response = await fetch(`${API_BASE}/categories/search?query=${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error('API not available');
+                return await response.json();
+            } catch (error) {
+                console.warn('Using fallback search:', error.message);
+                return fallbackCategories.filter(cat => 
+                    cat.name.toLowerCase().includes(query.toLowerCase())
+                );
+            }
+        }
+
+        async function getPopularCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/categories/popular`);
+                if (!response.ok) throw new Error('API not available');
+                return await response.json();
+            } catch (error) {
+                console.warn('Using fallback popular categories:', error.message);
+                return fallbackCategories.slice(0, 5);
+            }
+        }
+
+        async function getCategoryTree() {
+            try {
+                const response = await fetch(`${API_BASE}/categories/tree`);
+                if (!response.ok) throw new Error('API not available');
+                return await response.json();
+            } catch (error) {
+                console.warn('Using fallback tree:', error.message);
+                return fallbackCategories.map(cat => ({
+                    category: cat,
+                    children: [],
+                    vacancyCount: cat.totalVacancyCount
+                }));
+            }
+        }
+
+        // Search functionality
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            
+            if (query.length < 2) {
+                document.getElementById('searchResults').innerHTML = '';
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                const results = await searchCategories(query);
+                const resultsHtml = results.map(cat => 
+                    `<div class="category">
+                        <strong>${cat.name}</strong>
+                        <span style="color: #666; margin-left: 10px;">${cat.totalVacancyCount || 0} empleos</span>
+                    </div>`
+                ).join('');
+                
+                document.getElementById('searchResults').innerHTML = resultsHtml || '<p>No se encontraron categorías</p>';
+            }, 300);
+        });
+
+        // Load popular categories
+        async function loadPopularCategories() {
+            const popular = await getPopularCategories();
+            const popularHtml = popular.map(cat => 
+                `<div class="category">
+                    <strong>${cat.name}</strong>
+                    <span style="color: #666; margin-left: 10px;">${cat.totalVacancyCount || 0} empleos</span>
+                </div>`
+            ).join('');
+            
+            document.getElementById('popularCategories').innerHTML = popularHtml;
+        }
+
+        // Load category tree
+        async function loadCategoryTree() {
+            const tree = await getCategoryTree();
+            const treeHtml = tree.map(node => 
+                `<div class="category">
+                    <strong>${node.category.name}</strong>
+                    <span style="color: #666; margin-left: 10px;">${node.vacancyCount || 0} empleos</span>
+                    ${node.children.map(child => 
+                        `<div class="subcategory">
+                            ${child.category.name} (${child.vacancyCount || 0} empleos)
+                        </div>`
+                    ).join('')}
+                </div>`
+            ).join('');
+            
+            document.getElementById('categoryTree').innerHTML = treeHtml;
+        }
+
+        // Initialize
+        loadPopularCategories();
+        loadCategoryTree();
+
+        // Show status
+        console.log('🔍 Category test page loaded');
+        console.log('Try searching for: tecnología, ventas, salud, construcción');
+    </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Candidates collection - candidates can manage their own profile
+    match /candidates/{candidateId} {
+      allow read, write, create, update, delete: if request.auth != null && request.auth.uid == candidateId;
+    }
+    
+    // Users collection - users can manage their own profile (for backward compatibility)
+    match /users/{userId} {
+      allow read, write, create, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Companies collection - company users can manage their company data
+    match /companies/{companyId} {
+      allow read, write, create, update, delete: if request.auth != null && request.auth.uid == companyId;
+    }
+    
+    // Vacancies collection - read access for all authenticated users, write for authenticated users
+    match /vacancies/{vacancyId} {
+      allow read: if request.auth != null;
+      allow write, create, update, delete: if request.auth != null;
+    }
+    
+    // Applications collection - users can manage their own applications
+    match /applications/{applicationId} {
+      allow read, write, create, update: if request.auth != null;
+      allow list: if request.auth != null;
+    }
+    
+    // Messages collection - users can access their own messages
+    match /messages/{messageId} {
+      allow read, write, create, update: if request.auth != null;
+      allow list: if request.auth != null;
+    }
+    
+    // Profile Views collection - users can read views of their profile and create views of others
+    match /profileViews/{viewId} {
+      allow read, create: if request.auth != null;
+      allow list: if request.auth != null;
+    }
+    
+    // User Activity collection - users can access their own activity data
+    match /userActivity/{userId} {
+      allow read, write, create, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Categories collection - read access for all authenticated users
+    match /categories/{categoryId} {
+      allow read: if request.auth != null;
+    }
+    
+    // Default rule - deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

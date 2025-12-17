@@ -1,0 +1,34 @@
+# SO / misceláneo
+.DS_Store
+Thumbs.db
+*.log
+
+# Variables de entorno
+.env
+.env*.local
+
+# Dependencias y builds (global)
+node_modules/
+dist/
+build/
+coverage/
+
+# Next.js (frontend)
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+
+# NestJS (backend)
+backend/dist/
+backend/coverage/
+
+
+#fb
+backend/firebase-service-account.json
+FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.json
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
