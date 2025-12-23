@@ -287,10 +287,10 @@ export default function SmartProfilePage() {
                         : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                     } disabled:opacity-50`}
                   >
-                    {isRecording ? '🔴 Recording...' : '🎤 Voice Answer'}
+                    {isRecording ? '🔴 Grabando...' : '🎤 Responde con tu voz'}
                   </button>
                   <span className="text-xs text-zinc-500">
-                    {micSupported ? 'Click to record your answer' : 'Microphone not supported'}
+                    {micSupported ? 'Haz clic para grabar tu respuesta' : 'Microphone not supported'}
                   </span>
                 </div>
 

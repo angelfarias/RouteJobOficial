@@ -172,7 +172,7 @@ export default function Home() {
               onClick={() => window.location.href = "/login"}
               className="px-4 py-2 text-sm font-medium text-zinc-700 hover:text-zinc-900 transition-colors"
             >
-              Log in
+              Iniciar sesión
             </button>
             <button
               onClick={() => window.location.href = "/register"}
