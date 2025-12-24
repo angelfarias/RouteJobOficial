@@ -247,56 +247,56 @@ export default function MapaVacantesPage() {
       setLoadingVacantes(true);
       try {
         const API_URL = getApiUrl();
-        
+
         // Always use enhanced matching for better results
         const params = new URLSearchParams({
           enableDetailedMatching: 'true',
           radioKm: '15', // Slightly larger radius for map view
         });
-        
+
         // Add category filtering if categories are selected
         if (selectedCategories.length > 0) {
           params.set('categoryIds', selectedCategories.join(','));
           params.set('includeHierarchical', 'true');
         }
-        
+
         const url = `${API_URL}/match/candidate/${user.uid}?${params}`;
         const resp = await fetch(url);
-        
+
         if (!resp.ok) {
           throw new Error(`HTTP error! status: ${resp.status}`);
         }
-        
+
         const matchData = await resp.json();
-        
+
         // Convert enhanced match results to map format
-        const matchResults: MatchResult[] = Array.isArray(matchData) 
+        const matchResults: MatchResult[] = Array.isArray(matchData)
           ? matchData
-              .filter((match: any) => {
-                // Filter out matches with invalid coordinates
-                const lat = match.vacante?.lat;
-                const lng = match.vacante?.lng;
-                return lat && lng && !isNaN(lat) && !isNaN(lng);
-              })
-              .map((match: any) => ({
-                vacante: {
-                  id: match.vacante.id,
-                  title: match.vacante.title,
-                  company: match.vacante.company,
-                  branchName: match.vacante.branchName,
-                  lat: match.vacante.lat,
-                  lng: match.vacante.lng,
-                },
-                score: match.score,
-                color: match.color as MatchColor,
-                percentage: match.percentage,
-                // Include additional match info for tooltips
-                matchFactors: match.matchFactors,
-                categoryMatches: match.categoryMatches,
-                matchReasons: match.matchReasons,
-              }))
+            .filter((match: any) => {
+              // Filter out matches with invalid coordinates
+              const lat = match.vacante?.lat;
+              const lng = match.vacante?.lng;
+              return lat && lng && !isNaN(lat) && !isNaN(lng);
+            })
+            .map((match: any) => ({
+              vacante: {
+                id: match.vacante.id,
+                title: match.vacante.title,
+                company: match.vacante.company,
+                branchName: match.vacante.branchName,
+                lat: match.vacante.lat,
+                lng: match.vacante.lng,
+              },
+              score: match.score,
+              color: match.color as MatchColor,
+              percentage: match.percentage,
+              // Include additional match info for tooltips
+              matchFactors: match.matchFactors,
+              categoryMatches: match.categoryMatches,
+              matchReasons: match.matchReasons,
+            }))
           : [];
-        
+
         setVacantes(matchResults);
       } catch (e) {
         console.error("Error cargando matches:", e);
@@ -374,21 +374,21 @@ export default function MapaVacantesPage() {
 
     vacantes.forEach((m) => {
       const v = m.vacante;
-      
+
       // Validate lat/lng values
-      if (typeof v.lat !== 'number' || typeof v.lng !== 'number' || 
-          isNaN(v.lat) || isNaN(v.lng) || 
-          v.lat < -90 || v.lat > 90 || v.lng < -180 || v.lng > 180) {
+      if (typeof v.lat !== 'number' || typeof v.lng !== 'number' ||
+        isNaN(v.lat) || isNaN(v.lng) ||
+        v.lat < -90 || v.lat > 90 || v.lng < -180 || v.lng > 180) {
         console.warn(`Invalid coordinates for vacancy ${v.id}: lat=${v.lat}, lng=${v.lng}`);
         return; // Skip this vacancy
       }
-      
+
       const iconUrl =
         m.color === "green"
           ? "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
           : m.color === "yellow"
-          ? "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
-          : "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+            ? "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
+            : "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
 
       const marker = new google.maps.Marker({
         position: { lat: v.lat, lng: v.lng },
@@ -426,23 +426,35 @@ export default function MapaVacantesPage() {
         // Build match reasons if available
         const matchReasons = (m as any).matchReasons && (m as any).matchReasons.length > 0 ? `
           <div style="margin:6px 0">
-            ${(m as any).matchReasons.map((reason: string) => 
-              `<span style="display:inline-block;margin:2px 2px 0 0;padding:2px 6px;background:#1E40AF;color:#DBEAFE;border-radius:12px;font-size:9px">${reason}</span>`
-            ).join('')}
+            ${(m as any).matchReasons.map((reason: string) =>
+          `<span style="display:inline-block;margin:2px 2px 0 0;padding:2px 6px;background:#1E40AF;color:#DBEAFE;border-radius:12px;font-size:9px">${reason}</span>`
+        ).join('')}
           </div>
         ` : '';
 
         const content = `
-<div style="font-size:12px; max-width:280px">
-  <p style="font-weight:600;color:#E5E7EB;margin:0 0 2px">${v.title}</p>
-  <p style="margin:0 0 4px;color:#9CA3AF">${v.company} · ${v.branchName}</p>
-  <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
-    <span style="padding:4px 8px;border-radius:9999px;background:${
-      m.color === 'green' ? '#22C55E' : m.color === 'yellow' ? '#EAB308' : '#EF4444'
-    };color:#020617;font-size:11px;font-weight:700">
+<div style="font-size:13px; max-width:280px; font-family:Inter, sans-serif; color:#E5E7EB;">
+  <p style="font-weight:600; color:#000000; margin:0 0 4px;">${v.title}</p>
+  <p style="margin:0 0 8px; color:#000000; font-size:12px;">${v.company} · ${v.branchName}</p>
+  
+  <div style="display:flex; align-items:center; gap:8px; margin:8px 0;">
+    <span style="
+      padding:4px 10px;
+      border-radius:9999px;
+      background:${m.color === 'green' ? '#22C55E20' : m.color === 'yellow' ? '#EAB30820' : '#EF444420'
+          };
+      color:${m.color === 'green' ? '#22C55E' : m.color === 'yellow' ? '#EAB308' : '#EF4444'
+          };
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
+    ">
       ${m.score}% Match
     </span>
-    <span style="font-size:10px;color:#9CA3AF">${m.color === 'green' ? 'Excellent' : m.color === 'yellow' ? 'Good' : 'Fair'} fit</span>
+    <span style="font-size:11px; color:#9CA3AF;">
+      ${m.color === 'green' ? 'Excellent' : m.color === 'yellow' ? 'Good' : 'Fair'} fit
+    </span>
   </div>
   ${matchBreakdown}
   ${matchReasons}
@@ -529,9 +541,9 @@ export default function MapaVacantesPage() {
       </div>
 
       {/* Unified Header */}
-      <UnifiedHeader 
-        currentPage="smart-match" 
-        user={user} 
+      <UnifiedHeader
+        currentPage="smart-match"
+        user={user}
         showSmartFeatures={true}
         onLogout={async () => {
           await auth.signOut();
@@ -562,7 +574,7 @@ export default function MapaVacantesPage() {
                 </span>
               )}
             </div>
-            
+
             <button
               type="button"
               onClick={() => setShowCategoryFilter(!showCategoryFilter)}
@@ -630,7 +642,7 @@ export default function MapaVacantesPage() {
             ref={mapRef}
             style={{ width: "100%", height: "480px" }}
           />
-          
+
           {/* Match Legend */}
           {vacantes.length > 0 && (
             <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-xl rounded-lg p-3 shadow-lg border border-zinc-200">

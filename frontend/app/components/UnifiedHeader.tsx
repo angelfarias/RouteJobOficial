@@ -117,17 +117,14 @@ export default function UnifiedHeader({
   const items = isCompanyMode ? companyNavigationItems : navigationItems;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 backdrop-blur-xl border-b border-zinc-200/60 shadow-sm">
-      <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 h-16 bg-white/80 backdrop-blur-xl border-b border-zinc-200/50 shadow-sm`}>
+      <div className="mx-auto max-w-7xl h-full px-6 flex items-center justify-between">
         {/* Logo */}
-        <div
-          className="flex cursor-pointer items-center gap-3"
-          onClick={() => handleNavigation(isCompanyMode ? "/company" : "/dashboard")}
-        >
-          <div className="relative w-32 h-10">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleNavigation(isCompanyMode ? "/company" : "/dashboard")}>
+          <div className="relative w-40 h-24">
             <Image
               src="/logo.png"
-              alt="RouteJob"
+              alt="RouteJob Logo"
               fill
               className="object-contain object-left"
               priority
@@ -136,48 +133,35 @@ export default function UnifiedHeader({
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-6 md:flex text-sm">
-          {items.map((item) => {
-            const isActive = activePage === item.key;
-            const isSmartFeature = item.isSmartFeature && showSmartFeatures;
-            
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => handleNavigation(item.href)}
-                className={`font-semibold transition-all relative flex items-center gap-2 ${
-                  isActive
-                    ? isSmartFeature
-                      ? "text-purple-600 after:absolute after:left-0 after:-bottom-1 after:h-0.5 after:w-full after:bg-gradient-to-r after:from-purple-500 after:to-blue-500 after:rounded-full"
-                      : "text-emerald-600 after:absolute after:left-0 after:-bottom-1 after:h-0.5 after:w-full after:bg-emerald-500 after:rounded-full"
-                    : "text-zinc-600 hover:text-zinc-900 after:absolute after:left-0 after:-bottom-1 after:h-0.5 after:w-0 after:bg-emerald-500 after:rounded-full hover:after:w-full after:transition-all after:duration-300"
-                } ${isSmartFeature ? "hover:text-purple-600" : ""}`}
-              >
-                {item.icon}
-                {item.label}
-                {isSmartFeature && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border border-purple-200">
-                    AI
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          
-          {!isCompanyMode && (
-            <button
-              type="button"
-              onClick={() => handleNavigation("/company")}
-              className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-zinc-900/15 hover:bg-zinc-800 hover:scale-105 active:scale-95 transition-all"
+        <nav className="hidden md:flex items-center gap-8">
+          {items.map((item) => (
+            <a
+              key={item.key}
+              href={item.href}
+              onClick={(e) => {
+                e.preventDefault();
+                handleNavigation(item.href);
+              }}
+              className="text-sm font-medium text-zinc-600 hover:text-emerald-600 transition-colors"
             >
-              Cuenta empresa
-            </button>
-          )}
+              {item.label}
+            </a>
+          ))}
         </nav>
 
         {/* Right Side Actions */}
         <div className="relative flex items-center gap-3">
+          {/* Botón Cuenta Empresa */}
+          {!isCompanyMode && (
+            <button
+              onClick={() => handleNavigation("/company")}
+              className="group relative px-4 py-2 text-sm font-semibold text-white bg-zinc-900 rounded-full overflow-hidden transition-all hover:bg-zinc-800 hover:shadow-lg hover:shadow-zinc-900/20 active:scale-95"
+            >
+              <span className="relative z-10">Cuenta empresa</span>
+              <div className="absolute inset-0 h-full w-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+            </button>
+          )}
+
           {/* Notifications */}
           <button
             type="button"
@@ -208,10 +192,23 @@ export default function UnifiedHeader({
           {userMenuOpen && user && (
             <div className="absolute right-0 top-11 z-50 w-64 rounded-2xl border border-zinc-200 bg-white/95 backdrop-blur-xl text-zinc-900 shadow-xl shadow-zinc-900/10">
               <div className="border-b border-zinc-200 px-4 py-3">
-                <p className="text-sm font-semibold">
-                  {user.displayName || "Usuario"}
-                </p>
-                <p className="text-xs text-zinc-500">{user.email}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <span className="text-emerald-600 font-semibold text-lg">
+                      {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-zinc-900 truncate">
+                      {user.displayName || user.email || 'Usuario'}
+                    </p>
+                    {user.email && (
+                      <p className="text-xs text-zinc-500 truncate">
+                        {user.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
               
               {!isCompanyMode && (

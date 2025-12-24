@@ -244,7 +244,7 @@ export default function LoginPage() {
                   {/* Email Field */}
                   <div>
                     <div className="relative group">
-                      <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${
+                      <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors z-10 ${
                         validationErrors.email 
                           ? 'text-red-500 group-focus-within:text-red-600' 
                           : 'text-emerald-500 group-focus-within:text-emerald-600'
