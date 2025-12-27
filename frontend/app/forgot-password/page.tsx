@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isValidEmail()) {
       setErr("Por favor, ingresa un correo electrónico válido");
       return;
@@ -31,14 +31,14 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     setErr(null);
-    
+
     try {
       await sendPasswordResetEmail(auth, email.trim());
       setSuccess(true);
     } catch (e: any) {
       const errorResult = ErrorHandler.handleAuthError(e);
       const errorMessage = ErrorHandler.formatErrorMessage(errorResult);
-      
+
       setErr(errorMessage);
       setShowRetryButton(ErrorHandler.shouldShowRetryButton(errorResult));
     } finally {
@@ -48,14 +48,14 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <main className="min-h-screen flex flex-col bg-white text-zinc-900 overflow-x-hidden selection:bg-emerald-100 selection:text-emerald-900">
+      <main className="min-h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-x-hidden selection:bg-emerald-100 selection:text-emerald-900">
         {/* BACKGROUND PATTERN */}
         <div className="fixed inset-0 -z-10 pointer-events-none">
-          <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
+          <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
         </div>
 
         {/* NAVBAR */}
-        <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 backdrop-blur-xl border-b border-zinc-200/50 shadow-sm">
+        <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50 shadow-sm">
           <div className="mx-auto max-w-7xl h-full px-6 flex items-center justify-between">
             <div className="flex items-center gap-2 cursor-pointer">
               <div className="relative w-32 h-10">
@@ -63,14 +63,14 @@ export default function ForgotPasswordPage() {
                   src="/logo.png"
                   alt="RouteJob Logo"
                   fill
-                  className="object-contain object-left"
+                  className="object-contain object-left dark:invert dark:hue-rotate-180"
                   priority
                 />
               </div>
             </div>
             <Link
               href="/login"
-              className="text-sm font-semibold text-zinc-700 hover:text-zinc-900 transition-colors px-4 py-2 rounded-xl hover:bg-zinc-100"
+              className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors px-4 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >
               ← Volver al login
             </Link>
@@ -80,39 +80,39 @@ export default function ForgotPasswordPage() {
         {/* SUCCESS MESSAGE */}
         <section className="pt-24 pb-16 flex items-center justify-center px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)]">
           <div className="w-full max-w-md">
-            <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl border border-zinc-200 shadow-xl p-8 text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="relative bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl p-8 text-center">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
               </div>
-              
-              <h1 className="text-2xl font-bold text-zinc-900 mb-2">
+
+              <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-2">
                 ¡Correo enviado!
               </h1>
-              
-              <p className="text-sm text-zinc-600 mb-6">
-                Hemos enviado un enlace de recuperación a <strong>{email}</strong>. 
+
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
+                Hemos enviado un enlace de recuperación a <strong>{email}</strong>.
                 Revisa tu bandeja de entrada y sigue las instrucciones.
               </p>
-              
+
               <div className="space-y-3">
                 <Link
                   href="/login"
-                  className="block w-full py-2.5 bg-zinc-900 text-white text-sm font-semibold rounded-xl hover:bg-zinc-800 transition-colors"
+                  className="block w-full py-2.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-semibold rounded-xl hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
                 >
                   Volver al login
                 </Link>
-                
+
                 <button
                   onClick={() => {
                     setSuccess(false);
                     setEmail("");
                   }}
-                  className="block w-full py-2.5 text-sm font-semibold text-zinc-600 hover:text-zinc-900 transition-colors"
+                  className="block w-full py-2.5 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
                 >
                   Enviar a otro correo
                 </button>
               </div>
-              
+
               <p className="text-xs text-zinc-400 mt-4">
                 ¿No recibiste el correo? Revisa tu carpeta de spam o intenta de nuevo en unos minutos.
               </p>
@@ -124,14 +124,14 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col bg-white text-zinc-900 overflow-x-hidden selection:bg-emerald-100 selection:text-emerald-900">
+    <main className="min-h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-x-hidden selection:bg-emerald-100 selection:text-emerald-900">
       {/* BACKGROUND PATTERN */}
       <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
+        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
       </div>
 
       {/* NAVBAR */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 backdrop-blur-xl border-b border-zinc-200/50 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50 shadow-sm">
         <div className="mx-auto max-w-7xl h-full px-6 flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer">
             <div className="relative w-32 h-10">
@@ -139,14 +139,14 @@ export default function ForgotPasswordPage() {
                 src="/logo.png"
                 alt="RouteJob Logo"
                 fill
-                className="object-contain object-left"
+                className="object-contain object-left dark:invert dark:hue-rotate-180"
                 priority
               />
             </div>
           </div>
           <Link
             href="/login"
-            className="text-sm font-semibold text-zinc-700 hover:text-zinc-900 transition-colors px-4 py-2 rounded-xl hover:bg-zinc-100"
+            className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors px-4 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             ← Volver al login
           </Link>
@@ -156,12 +156,12 @@ export default function ForgotPasswordPage() {
       {/* FORGOT PASSWORD FORM */}
       <section className="pt-24 pb-16 flex items-center justify-center px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)]">
         <div className="w-full max-w-md">
-          <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl border border-zinc-200 shadow-xl p-6 sm:p-7">
+          <div className="relative bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl p-6 sm:p-7">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-zinc-900 via-zinc-900 to-emerald-600 bg-clip-text text-transparent mb-2 leading-tight">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-zinc-900 via-zinc-900 to-emerald-600 dark:from-zinc-100 dark:via-zinc-100 dark:to-emerald-400 bg-clip-text text-transparent mb-2 leading-tight">
                 Recuperar contraseña
               </h1>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña
               </p>
             </div>
@@ -169,11 +169,11 @@ export default function ForgotPasswordPage() {
             <form onSubmit={onSubmit} className="space-y-4">
               <div>
                 <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 group-focus-within:text-emerald-600 transition-colors" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 dark:text-emerald-400 group-focus-within:text-emerald-600 dark:group-focus-within:text-emerald-300 transition-colors" />
                   <input
                     type="email"
                     placeholder="Correo electrónico"
-                    className="w-full pl-9 pr-3 py-2.5 bg-white/60 backdrop-blur-sm border border-zinc-200 rounded-xl text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 transition-all hover:border-zinc-300"
+                    className="w-full pl-9 pr-3 py-2.5 bg-white/60 dark:bg-zinc-800/60 backdrop-blur-sm border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/60 transition-all hover:border-zinc-300 dark:hover:border-zinc-600"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -188,7 +188,7 @@ export default function ForgotPasswordPage() {
               </div>
 
               {err && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-xs">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-3 text-red-700 dark:text-red-400 text-xs">
                   <p>{err}</p>
                   {showRetryButton && (
                     <button
@@ -208,16 +208,14 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={loading || !isValidEmail()}
-                className={`group relative w-full py-2.5 text-sm font-bold rounded-xl overflow-hidden flex items-center justify-center gap-2 transition-all ${
-                  isValidEmail() && !loading
-                    ? "bg-zinc-900 text-white hover:bg-zinc-800 hover:scale-[1.02] shadow-lg shadow-zinc-900/15 active:scale-95"
-                    : "bg-zinc-100 text-zinc-500 cursor-not-allowed"
-                }`}
+                className={`group relative w-full py-2.5 text-sm font-bold rounded-xl overflow-hidden flex items-center justify-center gap-2 transition-all ${isValidEmail() && !loading
+                    ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 hover:scale-[1.02] shadow-lg shadow-zinc-900/15 active:scale-95"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
+                  }`}
               >
                 <div
-                  className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-700 ${
-                    isValidEmail() && !loading ? "group-hover:translate-x-full" : ""
-                  }`}
+                  className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-700 ${isValidEmail() && !loading ? "group-hover:translate-x-full" : ""
+                    }`}
                 />
                 <span className="relative z-10">
                   {loading ? "Enviando..." : "Enviar enlace de recuperación"}
@@ -228,26 +226,26 @@ export default function ForgotPasswordPage() {
               </button>
             </form>
 
-            <div className="mt-6 pt-4 border-t border-zinc-100 text-center">
-              <p className="text-xs text-zinc-500">
+            <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800 text-center">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 ¿Recordaste tu contraseña?{" "}
                 <Link
                   href="/login"
-                  className="text-emerald-600 font-semibold hover:text-emerald-700"
+                  className="text-emerald-600 dark:text-emerald-400 font-semibold hover:text-emerald-700 dark:hover:text-emerald-300"
                 >
                   Iniciar sesión
                 </Link>
               </p>
             </div>
 
-            <div className="flex items-center justify-center gap-4 mt-5 pt-3 border-t border-zinc-100">
+            <div className="flex items-center justify-center gap-4 mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center gap-1.5 text-[11px]">
                 <Shield className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-zinc-500 font-medium">Seguro</span>
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium">Seguro</span>
               </div>
               <div className="flex items-center gap-1.5 text-[11px]">
                 <Clock className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-zinc-500 font-medium">Instantáneo</span>
+                <span className="text-zinc-500 dark:text-zinc-400 font-medium">Instantáneo</span>
               </div>
             </div>
           </div>

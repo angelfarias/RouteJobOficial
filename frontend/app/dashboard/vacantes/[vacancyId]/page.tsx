@@ -102,58 +102,60 @@ export default function VacanteDetalle() {
   if (!vacante) return null;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <Link
-        href="/dashboard/mapa"
-        className="text-blue-500 hover:underline mb-6 inline-block"
-      >
-        ← Volver a vacantes
-      </Link>
-
-      <div className="bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          {vacante.title}
-        </h1>
-
-        <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-6">
-          {vacante.company && (
-            <span className="bg-blue-100 px-3 py-1 rounded-full">
-              {vacante.company}
-            </span>
-          )}
-          {vacante.branchName && (
-            <span className="bg-purple-100 px-3 py-1 rounded-full">
-              {vacante.branchName}
-            </span>
-          )}
-          {(vacante.salaryMin || vacante.salaryMax) && (
-            <span className="bg-green-100 px-3 py-1 rounded-full">
-              {vacante.salaryMin ?? ""} - {vacante.salaryMax ?? ""}
-            </span>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Descripción</h2>
-          <p className="text-gray-700 leading-relaxed">
-            {vacante.description}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={handlePostular}
-          disabled={postulando}
-          className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-60"
+    <div className="min-h-screen bg-white dark:bg-zinc-950 transition-colors duration-300">
+      <div className="max-w-4xl mx-auto p-6 pt-24">
+        <Link
+          href="/dashboard/mapa"
+          className="text-blue-500 dark:text-blue-400 hover:underline mb-6 inline-block"
         >
-          {postulando ? "Postulando..." : "Postular"}
-        </button>
+          ← Volver a vacantes
+        </Link>
 
-        {mensaje && (
-          <p className="mt-3 text-sm text-emerald-600">
-            {mensaje}
-          </p>
-        )}
+        <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-md dark:shadow-none border border-zinc-200 dark:border-zinc-800 p-8 transition-colors duration-300">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100 mb-4">
+            {vacante.title}
+          </h1>
+
+          <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-zinc-400 mb-6">
+            {vacante.company && (
+              <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-3 py-1 rounded-full">
+                {vacante.company}
+              </span>
+            )}
+            {vacante.branchName && (
+              <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 px-3 py-1 rounded-full">
+                {vacante.branchName}
+              </span>
+            )}
+            {(vacante.salaryMin || vacante.salaryMax) && (
+              <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-3 py-1 rounded-full">
+                {vacante.salaryMin ?? ""} - {vacante.salaryMax ?? ""}
+              </span>
+            )}
+          </div>
+
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-zinc-100 mb-2">Descripción</h2>
+            <p className="text-gray-700 dark:text-zinc-300 leading-relaxed">
+              {vacante.description}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handlePostular}
+            disabled={postulando}
+            className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-60 transition-colors"
+          >
+            {postulando ? "Postulando..." : "Postular"}
+          </button>
+
+          {mensaje && (
+            <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">
+              {mensaje}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

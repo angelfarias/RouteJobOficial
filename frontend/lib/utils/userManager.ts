@@ -1,9 +1,9 @@
 // User management utility for handling login/registration issues
 import { auth, db } from '@/lib/firebaseClient';
-import { 
-  signInWithEmailAndPassword, 
+import {
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail 
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -17,48 +17,44 @@ export class UserManager {
       console.log('🔍 Attempting login...');
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log('✅ Login successful:', userCredential.user.uid);
-      
+
+      // CRITICAL FIX: Ensure profile exists even on login
+      // This handles cases where user exists in Auth but missing in Firestore
+      await this.ensureUserProfile(userCredential.user.uid, email);
+
       return {
         success: true,
         message: 'Login exitoso',
         action: 'login'
       };
-      
+
     } catch (loginError: any) {
       console.log('❌ Login failed:', loginError.code);
-      
-      if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
-        // User doesn't exist, try to create account
-        try {
-          console.log('🔍 User not found, attempting to create account...');
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          console.log('✅ Account created successfully:', userCredential.user.uid);
-          
-          // Create Firestore profile
-          await this.createUserProfile(userCredential.user.uid, email);
-          
-          return {
-            success: true,
-            message: 'Cuenta creada exitosamente',
-            action: 'register'
-          };
-          
-        } catch (registerError: any) {
-          console.error('❌ Registration failed:', registerError);
-          return {
-            success: false,
-            message: `Error al crear cuenta: ${this.getErrorMessage(registerError)}`,
-            action: 'register'
-          };
-        }
-      } else {
-        // Other login errors
-        return {
-          success: false,
-          message: `Error de login: ${this.getErrorMessage(loginError)}`,
-          action: 'login'
-        };
+
+      // Strict Login: Do NOT attempt to register if user is not found
+      return {
+        success: false,
+        message: `Error de login: ${this.getErrorMessage(loginError)}`,
+        action: 'login'
+      };
+    }
+  }
+
+  /**
+   * Ensure user profile exists in Firestore (Idempotent)
+   */
+  static async ensureUserProfile(uid: string, email: string): Promise<void> {
+    try {
+      const docRef = doc(db, 'candidates', uid);
+      const docSnap = await import('firebase/firestore').then(m => m.getDoc(docRef));
+
+      if (!docSnap.exists()) {
+        console.log('⚠️ Profile missing for existing user, creating now...');
+        await this.createUserProfile(uid, email);
       }
+    } catch (error) {
+      console.error('Error ensuring user profile:', error);
+      // Don't block login if this check fails, but log it
     }
   }
 
@@ -67,9 +63,11 @@ export class UserManager {
    */
   static async createUserProfile(uid: string, email: string): Promise<void> {
     try {
+      const nowIso = new Date().toISOString();
       const profileData = {
         uid,
         email,
+        name: '', // Added name field
         displayName: '',
         profileCompleted: false,
         experience: [],
@@ -81,8 +79,9 @@ export class UserManager {
           experience: 0.2,
           skills: 0.1
         },
-        createdAt: new Date(),
-        lastUpdatedAt: new Date(),
+        createdAt: nowIso, // ISO String
+        updatedAt: nowIso, // ISO String
+        lastUpdatedAt: new Date(), // Keep Timestamp for compatibility (Firestore converts Date to Timestamp)
         syncMetadata: {
           syncVersion: '1.0.0',
           creationSource: 'auto-registration',
@@ -91,9 +90,16 @@ export class UserManager {
       };
 
       const docRef = doc(db, 'candidates', uid);
-      await setDoc(docRef, profileData);
-      console.log('✅ User profile created in Firestore');
-      
+      const userDocRef = doc(db, 'users', uid); // Dual-write target
+
+      // Write to both collections
+      await Promise.all([
+        setDoc(docRef, profileData),
+        setDoc(userDocRef, profileData)
+      ]);
+
+      console.log('✅ User profile created in Firestore (users + candidates)');
+
     } catch (error) {
       console.error('❌ Failed to create user profile:', error);
       throw error;

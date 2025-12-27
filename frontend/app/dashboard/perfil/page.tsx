@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebaseClient";
 import type { User } from "firebase/auth";
@@ -42,6 +42,11 @@ export default function PerfilPage() {
 
   // estado asistente
   const [mensaje, setMensaje] = useState("");
+  const mensajeRef = useRef(mensaje);
+  useEffect(() => {
+    mensajeRef.current = mensaje;
+  }, [mensaje]);
+
   const [paso, setPaso] = useState(0);
   const [respuestas, setRespuestas] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -55,63 +60,83 @@ export default function PerfilPage() {
     Record<number, string>
   >({});
   const [buscando, setBuscando] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const router = useRouter();
-  
+
   // Auth + carga de perfil y candidato
+  const fetchProfileData = async (uid: string) => {
+    const API_URL = getApiUrl();
+    try {
+      const resp = await fetch(`${API_URL}/chat-assistant/perfil?userId=${uid}`);
+      if (!resp.ok) throw new Error("Failed to fetch profile");
+      const json = await resp.json();
+      const perfilApi: PerfilApi | null = json.perfil || null;
+      setPerfil(perfilApi);
+
+      if (perfilApi?.respuestas) {
+        const arr: string[] = [];
+        for (let i = 0; i < preguntas.length; i++) {
+          arr[i] = perfilApi.respuestas[i]?.respuesta || "";
+        }
+        setRespuestas(arr);
+        // Only set message if not already set (to avoid overwriting user input during re-fetches if any)
+        // But here we usually want to sync. For now, let's only set it on initial load or step change.
+        // Actually, setRespuestas is enough, setMensaje is for current input.
+      }
+
+      if (perfilApi?.audios) {
+        const urls: Record<number, string> = {};
+        const flags: Record<number, boolean> = {};
+        Object.keys(perfilApi.audios).forEach((k) => {
+          const idx = Number(k);
+          const url = perfilApi.audios![k]?.url;
+          if (url) {
+            urls[idx] = url;
+            flags[idx] = true;
+          }
+        });
+        setAudioUrlsPorPaso(urls);
+        setAudioSubidoPorPaso(flags);
+      }
+
+      setCandidato(json.candidato || null);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
+  };
+
   useEffect(() => {
     console.log("PERFIL useEffect montado");
-    const API_URL = getApiUrl();
     const unsub = auth.onAuthStateChanged(async (firebaseUser) => {
       console.log("onAuthStateChanged perfil", firebaseUser?.uid);
-      
+
       if (!firebaseUser) {
         router.push("/login");
-        
       } else {
         setUser(firebaseUser);
-        
-        const resp = await fetch(
-          `${API_URL}/candidates/perfil?uid=${firebaseUser.uid}`,
-        );
-        const json = await resp.json();
-        const perfilApi: PerfilApi | null = json.perfil || null;
-        setPerfil(perfilApi);
+        await fetchProfileData(firebaseUser.uid);
 
-        if (perfilApi?.respuestas) {
-          const arr: string[] = [];
-          for (let i = 0; i < preguntas.length; i++) {
-            arr[i] = perfilApi.respuestas[i]?.respuesta || "";
-          }
-          setRespuestas(arr);
-          setMensaje(arr[0] || "");
-        }
-
-        if (perfilApi?.audios) {
-          const urls: Record<number, string> = {};
-          const flags: Record<number, boolean> = {};
-          Object.keys(perfilApi.audios).forEach((k) => {
-            const idx = Number(k);
-            const url = perfilApi.audios![k]?.url;
-            if (url) {
-              urls[idx] = url;
-              flags[idx] = true;
-            }
-          });
-          setAudioUrlsPorPaso(urls);
-          setAudioSubidoPorPaso(flags);
-        }
-        
-        const respCand = await fetch(
-          `${API_URL}/candidates/perfil?uid=${firebaseUser.uid}`,
-        );
-        const jsonCand = await respCand.json();
-        setCandidato(jsonCand.candidato || null);
+        // Initialize message for first step
+        // We need to wait for fetchProfileData to complete, but we can't easily access the state immediately.
+        // However, fetchProfileData sets 'respuestas'. 
+        // We can do a separate effect or just trust that the user will see the text when they navigate.
+        // For the initial load, we might want to setMensaje from the fetched data.
+        // Let's do it inside fetchProfileData logic or here if we had the data.
+        // Since fetchProfileData is async, we can't rely on state being updated immediately.
+        // But we can re-fetch the specific answer for step 0.
       }
       setLoading(false);
     });
     return () => unsub();
   }, [router]);
+
+  // Effect to update message when answers change (initial load)
+  useEffect(() => {
+    if (respuestas.length > 0 && paso === 0 && !mensaje) {
+      setMensaje(respuestas[0] || "");
+    }
+  }, [respuestas]);
 
   // detección micrófono
   useEffect(() => {
@@ -130,7 +155,7 @@ export default function PerfilPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen grid place-items-center bg-white text-zinc-700">
+      <main className="min-h-screen grid place-items-center bg-white dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300">
         Cargando...
       </main>
     );
@@ -200,67 +225,111 @@ export default function PerfilPage() {
   };
 
   const toggleRecording = async () => {
+    console.log("Button clicked - toggleRecording");
     if (typeof window === "undefined" || !user) return;
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition || !navigator.mediaDevices?.getUserMedia) {
+      console.error("SpeechRecognition or getUserMedia not supported");
       setMicSupported(false);
       return;
     }
 
     if (!isRecording) {
-      setMensaje("");
-      const recognition = new SpeechRecognition();
-      recognition.lang = "es-ES";
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.onresult = (event: any) => {
-        const last = event.results[event.results.length - 1];
-        const text = last[0].transcript as string;
-        setMensaje((prev) => (prev ? prev + " " + text : text));
-      };
-      (window as any)._routejob_recognition = recognition;
+      const textoInicial = mensaje; // Capture text before recording
 
       try {
+        // 1. Setup Speech Recognition
+        const recognition = new SpeechRecognition();
+        recognition.lang = "es-ES";
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          console.log('🎤 Speech recognition started event');
+          setIsListening(true);
+        };
+        recognition.onend = () => {
+          console.log('mic Speech recognition ended event');
+          setIsListening(false);
+        };
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error event:', event.error);
+          setIsListening(false);
+        };
+
+        recognition.onresult = (event: any) => {
+          if (!event.results) return;
+          let transcript = "";
+          for (let i = 0; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript;
+          }
+          console.log("Transcription result:", transcript);
+          setMensaje((textoInicial ? textoInicial + " " : "") + transcript);
+        };
+
+        // 2. Setup MediaRecorder
+        console.log("Requesting microphone stream...");
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("Microphone stream obtained");
+
         const mediaRecorder = new MediaRecorder(stream);
         const chunks: BlobPart[] = [];
         mediaRecorder.ondataavailable = (e) => {
           if (e.data.size > 0) chunks.push(e.data);
         };
         mediaRecorder.onstop = async () => {
+          console.log("MediaRecorder stopped, processing audio...");
           stream.getTracks().forEach((t) => t.stop());
           const blob = new Blob(chunks, { type: "audio/webm" });
           const formData = new FormData();
           formData.append("userId", user.uid);
           formData.append("paso", String(paso));
           formData.append("audio", blob, `respuesta-paso-${paso}.webm`);
-          const resp = await fetch(`${API_URL}/chat-assistant/audio`, {
-            method: "POST",
-            body: formData,
-          });
-          const json = await resp.json().catch(() => null);
-          const audioUrl = json?.url || json?.audioUrl || json?.fileUrl;
-          if (audioUrl) {
-            setAudioUrlsPorPaso((prev) => ({ ...prev, [paso]: audioUrl }));
+
+          try {
+            const resp = await fetch(`${API_URL}/chat-assistant/audio`, {
+              method: "POST",
+              body: formData,
+            });
+
+            if (resp.ok) {
+              console.log("Audio uploaded successfully");
+              // Refresh profile to ensure we have the correct URL
+              await fetchProfileData(user.uid);
+            } else {
+              console.error("Failed to upload audio");
+            }
+          } catch (error) {
+            console.error("Error uploading audio:", error);
           }
-          setAudioSubidoPorPaso((prev) => ({ ...prev, [paso]: true }));
         };
+
+        console.log("Starting MediaRecorder...");
         mediaRecorder.start();
         setMediaRecorderRef(mediaRecorder);
-        setIsRecording(true);
+
+        console.log("Starting SpeechRecognition...");
         recognition.start();
+
+        setIsRecording(true);
+        (window as any)._routejob_recognition = recognition;
+
       } catch (err) {
-        console.error(err);
+        console.error("Error in toggleRecording:", err);
         alert("No se pudo acceder al micrófono para grabar audio.");
+        setMicSupported(false);
       }
     } else {
+      console.log("Stopping recording...");
       const recognition = (window as any)._routejob_recognition;
       if (recognition) recognition.stop();
       if (mediaRecorderRef && mediaRecorderRef.state !== "inactive") {
         mediaRecorderRef.stop();
       }
       setIsRecording(false);
+      setIsListening(false);
     }
   };
 
@@ -312,16 +381,57 @@ export default function PerfilPage() {
     router.push("/dashboard/mapa");
   };
 
+  const handleDeleteAudio = async () => {
+    if (!user) return;
+
+    // Optimistic update
+    const previousUrl = audioUrlsPorPaso[paso];
+    setAudioUrlsPorPaso((prev) => {
+      const newUrls = { ...prev };
+      delete newUrls[paso];
+      return newUrls;
+    });
+    setAudioSubidoPorPaso((prev) => ({ ...prev, [paso]: false }));
+
+    try {
+      const resp = await fetch(`${API_URL}/chat-assistant/delete-audio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          stepNumber: paso,
+        }),
+      });
+
+      if (!resp.ok) {
+        throw new Error('Failed to delete audio');
+      }
+
+      // Refresh profile to ensure sync
+      await fetchProfileData(user.uid);
+    } catch (error) {
+      console.error('Error deleting audio:', error);
+      // Revert optimistic update
+      if (previousUrl) {
+        setAudioUrlsPorPaso((prev) => ({ ...prev, [paso]: previousUrl }));
+        setAudioSubidoPorPaso((prev) => ({ ...prev, [paso]: true }));
+      }
+      alert("No se pudo eliminar el audio. Intente nuevamente.");
+    }
+  };
+
   // --- UI combinada: asistente (izquierda) + preview (derecha) ---
 
   const esUltimaPregunta = paso === preguntas.length - 1;
 
   return (
-    <main className="min-h-screen flex flex-col bg-white text-zinc-900 relative overflow-hidden selection:bg-emerald-100 selection:text-emerald-900">
+    <main className="min-h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 relative overflow-hidden selection:bg-emerald-100 selection:text-emerald-900">
       {/* Unified Header */}
-      <UnifiedHeader 
-        currentPage="profile" 
-        user={user} 
+      <UnifiedHeader
+        currentPage="profile"
+        user={user}
         showSmartFeatures={true}
         onLogout={async () => {
           await auth.signOut();
@@ -329,21 +439,21 @@ export default function PerfilPage() {
       />
 
       <section className="mx-auto max-w-6xl px-4 pt-24 pb-12">
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-6 sm:p-8 shadow-xl shadow-emerald-100 border border-zinc-200 grid md:grid-cols-2 gap-8">
+        <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-2xl p-6 sm:p-8 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/10 border border-zinc-200 dark:border-zinc-800 grid md:grid-cols-2 gap-8">
           {/* Asistente izquierda */}
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-zinc-900">
+            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
               Asistente de perfil laboral
             </h2>
-            <p className="text-xs text-zinc-600">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
               Responde por voz o texto y verás tu perfil formateado al lado en
               tiempo real.
             </p>
 
-            <p className="text-xs text-emerald-700 font-semibold">
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
               Pregunta {paso + 1} de {preguntas.length}
             </p>
-            <p className="text-sm font-semibold text-zinc-800">
+            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
               {preguntas[paso]}
             </p>
 
@@ -353,7 +463,7 @@ export default function PerfilPage() {
                   type="button"
                   onClick={toggleRecording}
                   disabled={!micSupported || buscando}
-                  className="px-4 py-2 text-sm font-semibold text-white rounded-xl border border-emerald-600 bg-emerald-500 shadow-md shadow-emerald-300/40 disabled:opacity-60"
+                  className="px-4 py-2 text-sm font-semibold text-white rounded-xl border border-emerald-600 bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-300/40 dark:shadow-emerald-900/20 disabled:opacity-60"
                 >
                   {micSupported
                     ? isRecording
@@ -362,32 +472,45 @@ export default function PerfilPage() {
                     : "Micrófono no soportado"}
                 </button>
 
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
                   {audioSubidoPorPaso[paso]
                     ? "Audio guardado para esta respuesta."
                     : "Graba un audio para esta respuesta antes de seguir."}
                 </span>
               </div>
 
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">
                 {isRecording
-                  ? "Grabando… tu voz se guardará y se transcribirá aquí debajo."
+                  ? (isListening ? "🎙️ Escuchando... habla ahora." : "Esperando voz...")
                   : "Puedes editar el texto manualmente después de grabar para corregir detalles."}
               </span>
 
               {audioUrlsPorPaso[paso] && (
-                <audio
-                  controls
-                  src={audioUrlsPorPaso[paso]}
-                  className="mt-1 w-full"
-                >
-                  Tu navegador no soporta audio.
-                </audio>
+                <div className="mt-2 flex items-center gap-2">
+                  <audio
+                    controls
+                    src={audioUrlsPorPaso[paso]}
+                    className="w-full"
+                  >
+                    Tu navegador no soporta audio.
+                  </audio>
+                  <button
+                    type="button"
+                    onClick={handleDeleteAudio}
+                    className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    title="Eliminar audio"
+                  >
+                    🗑️
+                  </button>
+                </div>
               )}
             </div>
 
             <textarea
-              className="w-full min-h-[140px] border border-zinc-200 rounded-xl p-3 text-sm text-zinc-900 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              id="respuesta-textarea"
+              name="respuesta"
+              data-gramm="false"
+              className="w-full min-h-[140px] border border-zinc-200 dark:border-zinc-700 rounded-xl p-3 text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               placeholder="Responde aquí a la pregunta actual…"
               value={mensaje}
               onChange={(e) => setMensaje(e.target.value)}
@@ -400,7 +523,7 @@ export default function PerfilPage() {
                   type="button"
                   onClick={handleAnterior}
                   disabled={paso === 0 || buscando}
-                  className="px-4 py-2 text-sm font-semibold rounded-xl border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-semibold rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50"
                 >
                   Pregunta anterior
                 </button>
@@ -408,7 +531,7 @@ export default function PerfilPage() {
                   type="button"
                   onClick={handleGuardarYAvanzar}
                   disabled={buscando}
-                  className="px-4 py-2 text-sm font-semibold text-white rounded-xl bg-zinc-900 hover:bg-zinc-800 shadow-md shadow-zinc-900/20 disabled:opacity-60"
+                  className="px-4 py-2 text-sm font-semibold text-white rounded-xl bg-zinc-900 dark:bg-zinc-700 hover:bg-zinc-800 dark:hover:bg-zinc-600 shadow-md shadow-zinc-900/20 disabled:opacity-60"
                 >
                   {esUltimaPregunta
                     ? buscando
@@ -422,7 +545,7 @@ export default function PerfilPage() {
                 type="button"
                 onClick={handleFinalizarFormulario}
                 disabled={buscando}
-                className="px-4 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-400 shadow-md shadow-emerald-300/40 disabled:opacity-60"
+                className="px-4 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-400 shadow-md shadow-emerald-300/40 dark:shadow-emerald-900/20 disabled:opacity-60"
               >
                 {buscando ? "Buscando vacantes..." : "Finalizar formulario"}
               </button>
@@ -430,25 +553,25 @@ export default function PerfilPage() {
           </div>
 
           {/* Preview derecha mejorada */}
-          <div className="border border-emerald-100 rounded-2xl p-5 sm:p-6 bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/40 shadow-md shadow-emerald-100">
+          <div className="border border-emerald-100 dark:border-emerald-900/30 rounded-2xl p-5 sm:p-6 bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/40 dark:from-emerald-900/20 dark:via-zinc-900 dark:to-emerald-900/10 shadow-md shadow-emerald-100 dark:shadow-emerald-900/10">
             <div className="flex flex-col items-center sm:items-start gap-4 mb-5">
-              <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center text-2xl font-bold text-emerald-700 shadow-inner">
+              <div className="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-2xl font-bold text-emerald-700 dark:text-emerald-400 shadow-inner">
                 {user.displayName?.charAt(0).toUpperCase() ||
                   user.email?.charAt(0).toUpperCase()}
               </div>
               <div className="w-full">
-                <p className="font-semibold text-lg sm:text-xl text-zinc-900 leading-tight">
+                <p className="font-semibold text-lg sm:text-xl text-zinc-900 dark:text-zinc-100 leading-tight">
                   {user.displayName || "Tu nombre completo"}
                 </p>
-                <p className="mt-1 text-xs sm:text-sm text-zinc-500">
+                <p className="mt-1 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
                   {user.email}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-4 text-sm sm:text-[15px] text-zinc-800">
+            <div className="space-y-4 text-sm sm:text-[15px] text-zinc-800 dark:text-zinc-300">
               <div>
-                <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 uppercase">
+                <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 dark:text-emerald-400 uppercase">
                   Objetivo profesional
                 </h3>
                 <p className="mt-1 whitespace-pre-wrap leading-relaxed">
@@ -457,7 +580,7 @@ export default function PerfilPage() {
               </div>
 
               <div>
-                <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 uppercase">
+                <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 dark:text-emerald-400 uppercase">
                   Último cargo
                 </h3>
                 <p className="mt-1 whitespace-pre-wrap leading-relaxed">
@@ -467,7 +590,7 @@ export default function PerfilPage() {
 
               {otrasExperiencias && (
                 <div>
-                  <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 uppercase">
+                  <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 dark:text-emerald-400 uppercase">
                     Otras experiencias relevantes
                   </h3>
                   <p className="mt-1 whitespace-pre-wrap leading-relaxed">
@@ -478,7 +601,7 @@ export default function PerfilPage() {
 
               {skillsTexto && (
                 <div>
-                  <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 uppercase">
+                  <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 dark:text-emerald-400 uppercase">
                     Habilidades
                   </h3>
                   <p className="mt-1 whitespace-pre-wrap leading-relaxed">
@@ -488,7 +611,7 @@ export default function PerfilPage() {
               )}
 
               <div>
-                <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 uppercase">
+                <h3 className="text-[11px] sm:text-xs font-semibold tracking-[0.12em] text-emerald-700 dark:text-emerald-400 uppercase">
                   Educación
                 </h3>
                 <p className="mt-1 whitespace-pre-wrap leading-relaxed">

@@ -532,12 +532,12 @@ export default function MapaVacantesPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col bg-white text-zinc-900 relative overflow-hidden selection:bg-emerald-100 selection:text-emerald-900">
+    <main className="min-h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 relative overflow-hidden selection:bg-emerald-100 selection:text-emerald-900">
       {/* Fondo patrón claro */}
       <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200/40 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-sky-200/40 rounded-full blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200/40 dark:bg-emerald-900/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-sky-200/40 dark:bg-sky-900/20 rounded-full blur-3xl" />
       </div>
 
       {/* Unified Header */}
@@ -554,10 +554,10 @@ export default function MapaVacantesPage() {
       <section className="mx-auto max-w-6xl px-4 pt-24 pb-10 space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 mb-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-zinc-100 mb-1">
               Vacantes cerca de tu ubicación
             </h1>
-            <p className="text-sm text-zinc-600">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Explora el mapa, revisa el match y postula a los empleos que más te
               acomoden.
             </p>
@@ -565,11 +565,11 @@ export default function MapaVacantesPage() {
 
           <div className="flex items-center gap-2">
             {/* Smart Matching Indicator */}
-            <div className="px-3 py-2 text-xs font-semibold rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 shadow-sm flex items-center gap-2">
+            <div className="px-3 py-2 text-xs font-semibold rounded-xl border border-blue-200 dark:border-blue-800 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-300 shadow-sm flex items-center gap-2">
               <span>🤖</span>
               <span>Smart Matching Activo</span>
               {vacantes.length > 0 && (
-                <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded-full text-xs">
+                <span className="px-2 py-1 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full text-xs">
                   {vacantes.length} matches
                 </span>
               )}
@@ -578,7 +578,7 @@ export default function MapaVacantesPage() {
             <button
               type="button"
               onClick={() => setShowCategoryFilter(!showCategoryFilter)}
-              className="px-3 py-2 text-xs font-semibold rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 shadow-sm"
+              className="px-3 py-2 text-xs font-semibold rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 shadow-sm"
             >
               {selectedCategories.length > 0 ? `${selectedCategories.length} categorías` : 'Filtrar por categoría'}
             </button>
@@ -586,7 +586,7 @@ export default function MapaVacantesPage() {
               type="button"
               onClick={centrarEnMiUbicacion}
               disabled={!userLocation}
-              className="px-3 py-2 text-xs font-semibold rounded-xl border border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              className="px-3 py-2 text-xs font-semibold rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
               Centrar en mi ubicación
             </button>
@@ -595,15 +595,15 @@ export default function MapaVacantesPage() {
 
         {/* Category Filter */}
         {showCategoryFilter && (
-          <div className="rounded-2xl border border-zinc-200 bg-white/95 backdrop-blur-xl p-4 shadow-lg shadow-zinc-100">
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl p-4 shadow-lg shadow-zinc-100 dark:shadow-none">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-zinc-900">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 Filtrar empleos por categoría
               </h3>
               <button
                 type="button"
                 onClick={() => setShowCategoryFilter(false)}
-                className="text-zinc-400 hover:text-zinc-600"
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -618,13 +618,13 @@ export default function MapaVacantesPage() {
             />
             {selectedCategories.length > 0 && (
               <div className="mt-3 flex justify-between items-center">
-                <p className="text-xs text-zinc-600">
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   Mostrando empleos de las categorías seleccionadas
                 </p>
                 <button
                   type="button"
                   onClick={() => setSelectedCategories([])}
-                  className="text-xs text-emerald-600 hover:text-emerald-700 underline"
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 underline"
                 >
                   Limpiar filtros
                 </button>
@@ -637,7 +637,7 @@ export default function MapaVacantesPage() {
           <p className="text-sm text-red-500">{ubicacionError}</p>
         )}
 
-        <div className="rounded-2xl overflow-hidden border border-zinc-200 bg-white/70 backdrop-blur-xl shadow-lg shadow-zinc-100 relative">
+        <div className="rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl shadow-lg shadow-zinc-100 dark:shadow-none relative">
           <div
             ref={mapRef}
             style={{ width: "100%", height: "480px" }}
@@ -645,23 +645,23 @@ export default function MapaVacantesPage() {
 
           {/* Match Legend */}
           {vacantes.length > 0 && (
-            <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-xl rounded-lg p-3 shadow-lg border border-zinc-200">
-              <div className="text-xs font-semibold text-zinc-900 mb-2">Match Quality</div>
+            <div className="absolute top-4 right-4 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-lg p-3 shadow-lg border border-zinc-200 dark:border-zinc-800">
+              <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mb-2">Match Quality</div>
               <div className="space-y-1 text-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span className="text-zinc-700">90%+ Excellent</span>
+                  <span className="text-zinc-700 dark:text-zinc-300">90%+ Excellent</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <span className="text-zinc-700">70-89% Good</span>
+                  <span className="text-zinc-700 dark:text-zinc-300">70-89% Good</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <span className="text-zinc-700">&lt;70% Fair</span>
+                  <span className="text-zinc-700 dark:text-zinc-300">&lt;70% Fair</span>
                 </div>
               </div>
-              <div className="text-xs text-zinc-500 mt-2 pt-2 border-t border-zinc-200">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
                 Click markers for details
               </div>
             </div>
@@ -676,24 +676,24 @@ export default function MapaVacantesPage() {
 
         {/* Match Summary */}
         {vacantes.length > 0 && !loadingVacantes && (
-          <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl border border-emerald-200">
+          <div className="mt-4 p-4 bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-zinc-900">
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                   {vacantes.length} empleos encontrados con Smart Matching
                 </h3>
-                <p className="text-xs text-zinc-600">
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
                   Ordenados por compatibilidad con tu perfil
                 </p>
               </div>
               <div className="flex gap-2 text-xs">
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full">
                   {vacantes.filter(v => v.color === 'green').length} excelentes
                 </span>
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full">
                   {vacantes.filter(v => v.color === 'yellow').length} buenos
                 </span>
-                <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full">
+                <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full">
                   {vacantes.filter(v => v.color === 'red').length} regulares
                 </span>
               </div>

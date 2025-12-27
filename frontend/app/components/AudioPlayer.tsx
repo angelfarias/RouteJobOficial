@@ -1,7 +1,5 @@
-"use client";
-
 import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Volume2, VolumeX, RotateCcw } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, RotateCcw, Trash2 } from "lucide-react";
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -9,6 +7,7 @@ interface AudioPlayerProps {
   stepNumber: number;
   onPlayStart?: () => void;
   onPlayEnd?: () => void;
+  onDelete?: () => void;
   className?: string;
 }
 
@@ -18,6 +17,7 @@ export default function AudioPlayer({
   stepNumber,
   onPlayStart,
   onPlayEnd,
+  onDelete,
   className = "",
 }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -101,7 +101,7 @@ export default function AudioPlayer({
     const rect = progressBar.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const newTime = (clickX / rect.width) * duration;
-    
+
     audio.currentTime = newTime;
     setCurrentTime(newTime);
   };
@@ -143,7 +143,7 @@ export default function AudioPlayer({
 
   const formatTime = (time: number): string => {
     if (!isFinite(time)) return "0:00";
-    
+
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
@@ -163,29 +163,51 @@ export default function AudioPlayer({
             <p className="text-xs text-red-700">{error}</p>
             <p className="text-xs text-red-600 mt-1">Question: {questionText}</p>
           </div>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+              title="Delete audio"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl ${className}`}>
+    <div className={`p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-xl ${className}`}>
       <audio
         ref={audioRef}
         src={audioUrl}
         preload="metadata"
         className="hidden"
       />
-      
+
       {/* Question Text */}
-      <div className="mb-3">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-1 rounded-full">
-            Step {stepNumber}
-          </span>
-          <span className="text-xs text-blue-600">Audio Response</span>
+      <div className="mb-3 flex justify-between items-start">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded-full">
+              Step {stepNumber}
+            </span>
+            <span className="text-xs text-blue-600 dark:text-blue-400">Audio Response</span>
+          </div>
+          <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">{questionText}</p>
         </div>
-        <p className="text-sm text-blue-900 font-medium">{questionText}</p>
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+            title="Delete audio"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Audio Controls */}
@@ -213,7 +235,7 @@ export default function AudioPlayer({
           <div className="flex-1">
             <div
               ref={progressRef}
-              className="h-2 bg-white/60 rounded-full cursor-pointer relative overflow-hidden"
+              className="h-2 bg-white/60 dark:bg-zinc-700 rounded-full cursor-pointer relative overflow-hidden"
               onClick={handleProgressClick}
               role="progressbar"
               aria-valuemin={0}
@@ -226,7 +248,7 @@ export default function AudioPlayer({
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
-            <div className="flex justify-between text-xs text-blue-700 mt-1">
+            <div className="flex justify-between text-xs text-blue-700 dark:text-blue-300 mt-1">
               <span>{formatTime(currentTime)}</span>
               <span>{formatTime(duration)}</span>
             </div>
@@ -236,7 +258,7 @@ export default function AudioPlayer({
           <button
             type="button"
             onClick={resetAudio}
-            className="w-8 h-8 rounded-full bg-white/60 hover:bg-white/80 flex items-center justify-center text-blue-600 transition-all"
+            className="w-8 h-8 rounded-full bg-white/60 dark:bg-zinc-700 hover:bg-white/80 dark:hover:bg-zinc-600 flex items-center justify-center text-blue-600 dark:text-blue-400 transition-all"
             aria-label="Reset audio"
           >
             <RotateCcw className="w-4 h-4" />
@@ -248,7 +270,7 @@ export default function AudioPlayer({
           <button
             type="button"
             onClick={toggleMute}
-            className="w-6 h-6 flex items-center justify-center text-blue-600 hover:text-blue-800 transition-colors"
+            className="w-6 h-6 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
             aria-label={isMuted ? "Unmute" : "Mute"}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -260,13 +282,13 @@ export default function AudioPlayer({
             step="0.1"
             value={isMuted ? 0 : volume}
             onChange={handleVolumeChange}
-            className="flex-1 h-1 bg-white/60 rounded-full appearance-none cursor-pointer"
+            className="flex-1 h-1 bg-white/60 dark:bg-zinc-700 rounded-full appearance-none cursor-pointer"
             style={{
               background: `linear-gradient(to right, rgb(59 130 246) 0%, rgb(59 130 246) ${(isMuted ? 0 : volume) * 100}%, rgb(255 255 255 / 0.6) ${(isMuted ? 0 : volume) * 100}%, rgb(255 255 255 / 0.6) 100%)`
             }}
             aria-label="Volume control"
           />
-          <span className="text-xs text-blue-700 w-8 text-right">
+          <span className="text-xs text-blue-700 dark:text-blue-300 w-8 text-right">
             {Math.round((isMuted ? 0 : volume) * 100)}%
           </span>
         </div>

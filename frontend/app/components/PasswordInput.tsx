@@ -9,6 +9,7 @@ interface PasswordInputProps {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFocus?: () => void;
+  onBlur?: () => void;
   className?: string;
   hasError?: boolean;
   required?: boolean;
@@ -21,6 +22,7 @@ export default function PasswordInput({
   value,
   onChange,
   onFocus,
+  onBlur,
   className = "",
   hasError = false,
   required = false,
@@ -36,14 +38,14 @@ export default function PasswordInput({
 
   const iconSizes = {
     sm: 'w-4 h-4',
-    md: 'w-4 h-4', 
+    md: 'w-4 h-4',
     lg: 'w-5 h-5'
   };
 
   const baseClasses = `w-full bg-white/60 backdrop-blur-sm border rounded-xl text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 transition-all hover:border-zinc-300 ${sizeClasses[size]}`;
-  
-  const errorClasses = hasError 
-    ? 'border-red-300 focus:ring-red-500 focus:border-red-500/60' 
+
+  const errorClasses = hasError
+    ? 'border-red-300 focus:ring-red-500 focus:border-red-500/60'
     : 'border-zinc-200 focus:ring-emerald-500 focus:border-emerald-500/60';
 
   return (
@@ -56,6 +58,7 @@ export default function PasswordInput({
         value={value}
         onChange={onChange}
         onFocus={onFocus}
+        onBlur={onBlur}
         required={required}
       />
       <button

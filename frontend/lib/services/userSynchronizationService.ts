@@ -6,11 +6,12 @@ import { db } from '@/lib/firebaseClient';
 export interface CandidateProfile {
   uid: string;
   email: string;
-  displayName?: string;
-  
+  name?: string;        // Requested field
+  displayName?: string; // Kept for backward compatibility
+
   // Profile completion status
   profileCompleted: boolean;
-  
+
   // Core candidate data (following existing structure)
   experience?: string[];
   skills?: string[];
@@ -19,11 +20,11 @@ export interface CandidateProfile {
     longitude: number;
   };
   radioKm?: number;
-  
+
   // Category preferences
   preferredCategories?: string[];
   categoryWeights?: { [categoryId: string]: number };
-  
+
   // Match weights
   matchWeights?: {
     location?: number;
@@ -31,11 +32,12 @@ export interface CandidateProfile {
     experience?: number;
     skills?: number;
   };
-  
-  // Timestamps
-  createdAt?: Timestamp;
-  lastUpdatedAt?: Timestamp;
-  
+
+  // Timestamps (Strings as requested)
+  createdAt?: string;
+  updatedAt?: string;
+  lastUpdatedAt?: Timestamp; // Kept for internal use/compatibility
+
   // Sync metadata
   syncMetadata?: {
     syncVersion: string;
@@ -59,7 +61,7 @@ export interface SyncError {
 // Main synchronization service
 export class UserSynchronizationService {
   private static instance: UserSynchronizationService;
-  
+
   public static getInstance(): UserSynchronizationService {
     if (!UserSynchronizationService.instance) {
       UserSynchronizationService.instance = new UserSynchronizationService();
@@ -70,14 +72,14 @@ export class UserSynchronizationService {
   /**
    * Synchronize user on registration - create candidate profile document
    */
-  async syncUserOnRegistration(user: FirebaseUser): Promise<CandidateProfile> {
+  async syncUserOnRegistration(user: FirebaseUser, additionalData?: { displayName?: string }): Promise<CandidateProfile> {
     const correlationId = this.generateCorrelationId();
-    
+
     try {
       this.logSyncStart(user.uid, 'registration', correlationId);
-      
-      const profile = await this.createCandidateProfile(user, 'registration');
-      
+
+      const profile = await this.createCandidateProfile(user, 'registration', additionalData);
+
       this.logSyncSuccess(user.uid, 'registration', correlationId);
       return profile;
     } catch (error) {
@@ -91,13 +93,13 @@ export class UserSynchronizationService {
    */
   async syncUserOnLogin(user: FirebaseUser): Promise<CandidateProfile> {
     const correlationId = this.generateCorrelationId();
-    
+
     try {
       this.logSyncStart(user.uid, 'login', correlationId);
-      
+
       // Check if candidate profile exists
       const profileExists = await this.verifyCandidateExists(user.uid);
-      
+
       let profile: CandidateProfile;
       if (profileExists) {
         profile = await this.getCandidateProfile(user.uid);
@@ -105,7 +107,7 @@ export class UserSynchronizationService {
         // Create candidate profile for existing auth user
         profile = await this.createCandidateProfile(user, 'login');
       }
-      
+
       this.logSyncSuccess(user.uid, 'login', correlationId);
       return profile;
     } catch (error) {
@@ -134,11 +136,11 @@ export class UserSynchronizationService {
   async getCandidateProfile(userId: string): Promise<CandidateProfile> {
     const docRef = doc(db, 'candidates', userId);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       throw new Error(`Candidate profile not found for user ${userId}`);
     }
-    
+
     return docSnap.data() as CandidateProfile;
   }
 
@@ -146,25 +148,28 @@ export class UserSynchronizationService {
    * Create new candidate profile document in Firestore (following existing structure)
    */
   async createCandidateProfile(
-    user: FirebaseUser, 
-    creationSource: 'registration' | 'login' | 'manual' = 'registration'
+    user: FirebaseUser,
+    creationSource: 'registration' | 'login' | 'manual' = 'registration',
+    additionalData?: { displayName?: string }
   ): Promise<CandidateProfile> {
-    const now = serverTimestamp() as Timestamp;
-    
+    const nowIso = new Date().toISOString();
+    const nowTimestamp = serverTimestamp() as Timestamp;
+
     const profile: CandidateProfile = {
       uid: user.uid,
       email: user.email || '',
-      displayName: user.displayName || '',
-      
+      name: additionalData?.displayName || user.displayName || '',
+      displayName: additionalData?.displayName || user.displayName || '',
+
       // Profile completion status (following existing pattern)
       profileCompleted: false,
-      
+
       // Initialize empty arrays for candidate data (following existing structure)
       experience: [],
       skills: [],
       preferredCategories: [],
       categoryWeights: {},
-      
+
       // Default match weights
       matchWeights: {
         location: 0.3,
@@ -172,11 +177,12 @@ export class UserSynchronizationService {
         experience: 0.2,
         skills: 0.1
       },
-      
+
       // Timestamps
-      createdAt: now,
-      lastUpdatedAt: now,
-      
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      lastUpdatedAt: nowTimestamp,
+
       // Sync metadata
       syncMetadata: {
         syncVersion: '1.0.0',
@@ -187,13 +193,19 @@ export class UserSynchronizationService {
 
     try {
       const docRef = doc(db, 'candidates', user.uid);
-      await setDoc(docRef, profile);
-      
-      console.log(`✅ Candidate profile created successfully for ${user.uid}`);
+      const userDocRef = doc(db, 'users', user.uid); // Dual-write target
+
+      // Write to both collections in parallel
+      await Promise.all([
+        setDoc(docRef, profile),
+        setDoc(userDocRef, profile)
+      ]);
+
+      console.log(`✅ Candidate profile created successfully for ${user.uid} in both collections`);
       return profile;
     } catch (error: any) {
       console.error('❌ Error creating candidate profile:', error);
-      
+
       // Handle specific Firebase errors
       if (error.code === 'permission-denied') {
         throw new Error(`Permisos insuficientes para crear el perfil. Por favor, contacta al soporte técnico.`);
@@ -212,14 +224,20 @@ export class UserSynchronizationService {
    */
   async updateCandidateProfile(userId: string, updates: Partial<CandidateProfile>): Promise<CandidateProfile> {
     const docRef = doc(db, 'candidates', userId);
-    
+    const userDocRef = doc(db, 'users', userId); // Dual-write target
+
     const updateData = {
       ...updates,
+      updatedAt: new Date().toISOString(),
       lastUpdatedAt: serverTimestamp()
     };
-    
-    await setDoc(docRef, updateData, { merge: true });
-    
+
+    // Update both collections
+    await Promise.all([
+      setDoc(docRef, updateData, { merge: true }),
+      setDoc(userDocRef, updateData, { merge: true })
+    ]);
+
     // Return updated profile
     return this.getCandidateProfile(userId);
   }
@@ -228,7 +246,7 @@ export class UserSynchronizationService {
    * Retry candidate profile creation with exponential backoff
    */
   async retryCandidateCreation(
-    user: FirebaseUser, 
+    user: FirebaseUser,
     attempt: number = 1,
     maxAttempts: number = 5
   ): Promise<CandidateProfile> {
@@ -240,9 +258,9 @@ export class UserSynchronizationService {
       return await this.createCandidateProfile(user, 'manual');
     } catch (error) {
       const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
-      
+
       console.warn(`Candidate profile creation attempt ${attempt} failed, retrying in ${delay}ms...`);
-      
+
       await new Promise(resolve => setTimeout(resolve, delay));
       return this.retryCandidateCreation(user, attempt + 1, maxAttempts);
     }

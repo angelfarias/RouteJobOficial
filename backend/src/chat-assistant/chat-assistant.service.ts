@@ -146,26 +146,26 @@ export class ChatAssistantService {
     if (!session?.respuestas) return null;
 
     const responses = session.respuestas;
-    
+
     // Extract structured data from responses
     const profileData = {
       // Basic info
       objective: responses[0]?.respuesta || '',
-      
+
       // Experience extraction
       experience: this.extractExperience(responses),
-      
+
       // Skills extraction
       skills: this.extractSkills(responses),
-      
+
       // Education
       education: this.extractEducation(responses),
-      
+
       // Suggested categories based on responses
       suggestedCategories: await this.suggestCategories(responses),
-      
+
       // Profile completeness score
-      completenessScore: this.calculateCompleteness(responses),
+      completenessScore: this.calculateCompleteness(responses, session.audios || {}),
     };
 
     return profileData;
@@ -188,19 +188,19 @@ export class ChatAssistantService {
       description: string;
       skills: string[];
     }> = [];
-    
+
     // Recent experience (response 1)
     if (responses[1]?.respuesta) {
       const recent = this.parseExperienceText(responses[1].respuesta);
       if (recent) experiences.push(recent);
     }
-    
+
     // Other experiences (response 2)
     if (responses[2]?.respuesta) {
       const others = this.parseMultipleExperiences(responses[2].respuesta);
       experiences.push(...others);
     }
-    
+
     return experiences;
   }
 
@@ -221,12 +221,12 @@ export class ChatAssistantService {
       .trim();
 
     const lines = cleanedText.split(/[,\n]/).map(l => l.trim()).filter(l => l);
-    
+
     let title = '';
     let company = '';
     let period = '';
     let description = '';
-    
+
     // Look for patterns
     for (const line of lines) {
       if (line.match(/\d{4}/)) {
@@ -242,7 +242,7 @@ export class ChatAssistantService {
         description += (description ? ', ' : '') + line;
       }
     }
-    
+
     return title ? { title, company, period, description, skills: [] } : null;
   }
 
@@ -274,7 +274,7 @@ export class ChatAssistantService {
     const technical: string[] = [];
     const soft: string[] = [];
     const languages: string[] = [];
-    
+
     // Technical skills (response 3)
     if (responses[3]?.respuesta) {
       const techSkills = responses[3].respuesta
@@ -283,7 +283,7 @@ export class ChatAssistantService {
         .filter(s => s.length > 1);
       technical.push(...techSkills);
     }
-    
+
     // Soft skills (response 4)
     if (responses[4]?.respuesta) {
       const softSkills = responses[4].respuesta
@@ -292,7 +292,7 @@ export class ChatAssistantService {
         .filter(s => s.length > 1);
       soft.push(...softSkills);
     }
-    
+
     // Extract languages from all responses
     const allText = Object.values(responses).map((r: any) => r.respuesta || '').join(' ');
     const languagePatterns = ['inglés', 'english', 'francés', 'french', 'alemán', 'german', 'portugués', 'portuguese'];
@@ -301,7 +301,7 @@ export class ChatAssistantService {
         languages.push(lang);
       }
     });
-    
+
     return { technical, soft, languages };
   }
 
@@ -320,19 +320,19 @@ export class ChatAssistantService {
       period: string;
       status: 'completed' | 'in_progress' | 'incomplete';
     }> = [];
-    
+
     // Main education (response 5)
     if (responses[5]?.respuesta) {
       const edu = this.parseEducationText(responses[5].respuesta);
       if (edu) education.push(edu);
     }
-    
+
     // Additional training (response 6)
     if (responses[6]?.respuesta) {
       const additional = this.parseAdditionalTraining(responses[6].respuesta);
       education.push(...additional);
     }
-    
+
     return education;
   }
 
@@ -346,12 +346,12 @@ export class ChatAssistantService {
     status: 'completed' | 'in_progress' | 'incomplete';
   } | null {
     const lines = text.split(/[,\n]/).map(l => l.trim()).filter(l => l);
-    
+
     let degree = '';
     let institution = '';
     let period = '';
     let status: 'completed' | 'in_progress' | 'incomplete' = 'completed';
-    
+
     for (const line of lines) {
       if (line.match(/\d{4}/)) {
         period = line;
@@ -363,7 +363,7 @@ export class ChatAssistantService {
         degree = line;
       }
     }
-    
+
     return degree ? { degree, institution, period, status } : null;
   }
 
@@ -392,7 +392,7 @@ export class ChatAssistantService {
           .replace(/^(tengo|hice|completé|terminé|obtuve)\s+/gi, '')
           .replace(/^(un|una|el|la|de|en)\s+/gi, '')
           .trim();
-        
+
         return cleanCourse;
       })
       .filter(course => course.length > 0);
@@ -413,33 +413,33 @@ export class ChatAssistantService {
       .map((r: any) => r.respuesta || '')
       .join(' ')
       .toLowerCase();
-    
+
     // Get all categories
     const result = await this.categoriesService.searchCategoriesAdvanced({
       includeInactive: false,
       limit: 100
     });
     const categories = result?.categories || [];
-    
+
     // If no categories found, return empty array
     if (!Array.isArray(categories) || categories.length === 0) {
       return [];
     }
-    
+
     // Score categories based on keyword matches
     const categoryScores = categories.map(category => {
       let score = 0;
       const keywords = this.getCategoryKeywords(category.name.toLowerCase());
-      
+
       keywords.forEach(keyword => {
         if (allText.includes(keyword)) {
           score += 1;
         }
       });
-      
+
       return { category: category.id, name: category.name, score };
     });
-    
+
     // Return top 5 categories
     return categoryScores
       .filter(c => c.score > 0)
@@ -462,27 +462,35 @@ export class ChatAssistantService {
       'gastronomía': ['cocina', 'restaurante', 'chef', 'comida', 'mesero'],
       'transporte': ['conductor', 'transporte', 'logística', 'delivery'],
     };
-    
+
     return keywordMap[categoryName] || [categoryName];
   }
 
   /**
    * Calculate profile completeness score
    */
-  private calculateCompleteness(responses: any): number {
+  private calculateCompleteness(responses: any, audios: any = {}): number {
     const totalQuestions = 7;
-    const answeredQuestions = Object.keys(responses).length;
-    
+    const answeredQuestions = new Set([
+      ...Object.keys(responses),
+      ...Object.keys(audios)
+    ]).size;
+
     let qualityScore = 0;
     Object.values(responses).forEach((response: any) => {
       const text = response.respuesta || '';
       if (text.length > 20) qualityScore += 1; // Detailed response
       else if (text.length > 5) qualityScore += 0.5; // Basic response
     });
-    
+
+    // Score audio responses (bonus for audio)
+    Object.keys(audios).forEach(() => {
+      qualityScore += 0.5;
+    });
+
     const completenessRatio = answeredQuestions / totalQuestions;
     const qualityRatio = qualityScore / totalQuestions;
-    
+
     return Math.round((completenessRatio * 0.6 + qualityRatio * 0.4) * 100);
   }
 
@@ -503,34 +511,34 @@ export class ChatAssistantService {
         "Área de interés: Responde solo con el sector donde quieres trabajar. Ejemplo: 'Tecnología' o 'Marketing Digital'"
       ];
     }
-    
+
     const questions: string[] = [];
-    
+
     // Generate follow-up questions based on missing or incomplete data
     if (!profileData.objective || profileData.objective.length < 10) {
       questions.push("Objetivo profesional: Responde solo con tu objetivo laboral principal en una frase corta.");
     }
-    
+
     if (profileData.experience.length === 0) {
       questions.push("Experiencia laboral: Menciona solo tu trabajo más reciente. Formato: Cargo - Empresa - Período.");
     }
-    
+
     if (profileData.skills.technical.length < 3) {
       questions.push("Habilidades técnicas: Lista solo las herramientas que dominas. Separa con comas, sin explicaciones.");
     }
-    
+
     if (profileData.skills.soft.length < 3) {
       questions.push("Competencias personales: Menciona solo 3-5 habilidades blandas clave. Separa con comas.");
     }
-    
+
     if (profileData.education.length === 0) {
       questions.push("Formación académica: Indica solo tu título principal. Formato: Título - Institución.");
     }
-    
+
     if (profileData.suggestedCategories.length === 0) {
       questions.push("Sector de interés: Responde solo con el área donde quieres trabajar. Una o dos palabras máximo.");
     }
-    
+
     return questions.slice(0, 3); // Limit to 3 questions at a time
   }
 
@@ -563,10 +571,11 @@ export class ChatAssistantService {
       const audioData = audios[stepKey];
       const questionData = respuestas[stepKey];
 
-      if (audioData?.url && questionData?.pregunta) {
+      // Allow audio even if text answer is missing
+      if (audioData?.url) {
         audioResponses.push({
           stepNumber,
-          questionText: questionData.pregunta,
+          questionText: questionData?.pregunta || `Pregunta ${stepNumber + 1}`,
           audioUrl: audioData.url,
           createdAt: data.updatedAt || null,
         });
@@ -586,7 +595,7 @@ export class ChatAssistantService {
 
     const data = doc.data() as any;
     const audios = data.audios || {};
-    
+
     return !!(audios[stepNumber]?.url);
   }
 
@@ -596,7 +605,7 @@ export class ChatAssistantService {
   async deleteAudioForStep(userId: string, stepNumber: number): Promise<void> {
     const docRef = this.db.collection('assistant_sessions').doc(userId);
     const doc = await docRef.get();
-    
+
     if (!doc.exists) return;
 
     const data = doc.data() as any;
@@ -623,10 +632,16 @@ export class ChatAssistantService {
       this.getAudioResponses(userId),
     ]);
 
+    // Fetch candidate profile to get name
+    const candidateDoc = await this.db.collection('candidates').doc(userId).get();
+    const candidateData = candidateDoc.exists ? candidateDoc.data() : {};
+    const name = candidateData?.displayName || candidateData?.name || '';
+
     return {
       ...profileData,
       audioResponses,
       hasAudioContent: audioResponses.length > 0,
+      name,
     };
   }
 }

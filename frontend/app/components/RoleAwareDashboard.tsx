@@ -74,7 +74,7 @@ export default function RoleAwareDashboard({
     if (!currentRole || isInitializing || isLoading) return;
 
     const canAccess = RoleBasedRoutingService.canAccessPath(pathname, currentRole);
-    
+
     if (!canAccess) {
       const redirectPath = RoleBasedRoutingService.getRedirectPath(pathname, currentRole);
       if (redirectPath && redirectPath !== pathname) {
@@ -110,11 +110,11 @@ export default function RoleAwareDashboard({
   const handleRoleSelect = async (role: ProfileType) => {
     try {
       await switchRole(role);
-      
+
       // Navigate to appropriate dashboard
       const dashboardPath = RoleBasedRoutingService.getDashboardPath(role);
       router.push(dashboardPath);
-      
+
       setShowRoleSelector(false);
     } catch (error) {
       console.error('Error selecting role:', error);
@@ -122,27 +122,27 @@ export default function RoleAwareDashboard({
   };
 
   // Get role-specific features
-  const roleFeatures = currentRole 
+  const roleFeatures = currentRole
     ? RoleBasedRoutingService.getRoleFeatures(currentRole)
     : { showSmartFeatures: false, availableFeatures: [], hiddenFeatures: [] };
 
   // Get navigation items for current role
-  const navigationItems = currentRole 
+  const navigationItems = currentRole
     ? RoleBasedRoutingService.getNavigationItems(currentRole)
     : [];
 
   // Get breadcrumbs for current path
-  const breadcrumbs = currentRole 
+  const breadcrumbs = currentRole
     ? RoleBasedRoutingService.getBreadcrumbs(pathname, currentRole)
     : [];
 
   // Show loading state
   if (isLoading || isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-zinc-600">Cargando dashboard...</p>
+          <p className="text-zinc-600 dark:text-zinc-400">Cargando dashboard...</p>
         </div>
       </div>
     );
@@ -152,7 +152,7 @@ export default function RoleAwareDashboard({
   if (showRoleSelector) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <RoleSelector
               availableRoles={availableRoles}
@@ -169,12 +169,12 @@ export default function RoleAwareDashboard({
   // Show error state if no role available
   if (!currentRole) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
         <div className="text-center max-w-md">
-          <h2 className="text-xl font-semibold text-zinc-900 mb-2">
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
             No hay perfiles disponibles
           </h2>
-          <p className="text-zinc-600 mb-6">
+          <p className="text-zinc-600 dark:text-zinc-400 mb-6">
             Necesitas crear un perfil para acceder al dashboard.
           </p>
           <button
@@ -189,7 +189,7 @@ export default function RoleAwareDashboard({
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950">
       {/* Enhanced Header with Role Management */}
       <UnifiedHeader
         currentPage={getCurrentPageFromPath(pathname)}
@@ -201,7 +201,7 @@ export default function RoleAwareDashboard({
       />
 
       {/* Role Management Bar */}
-      <div className="fixed top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-b border-zinc-200">
+      <div className="fixed top-16 left-0 right-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm border-b border-zinc-200 dark:border-zinc-800">
         <div className="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
           {/* Breadcrumbs */}
           <nav className="flex items-center space-x-2 text-sm">
@@ -212,11 +212,10 @@ export default function RoleAwareDashboard({
                 )}
                 <button
                   onClick={() => router.push(crumb.href)}
-                  className={`${
-                    crumb.isActive 
-                      ? 'text-zinc-900 font-medium' 
-                      : 'text-zinc-500 hover:text-zinc-700'
-                  } transition-colors`}
+                  className={`${crumb.isActive
+                    ? 'text-zinc-900 dark:text-zinc-100 font-medium'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'
+                    } transition-colors`}
                 >
                   {crumb.label}
                 </button>
@@ -273,7 +272,7 @@ export default function RoleAwareDashboard({
 }
 
 // Helper functions
-function getCurrentPageFromPath(pathname: string): string {
+function getCurrentPageFromPath(pathname: string): 'dashboard' | 'smart-cv' | 'smart-match' | 'company' | 'jobs' | 'profile' {
   if (pathname.includes('/perfil/smart')) return 'smart-cv';
   if (pathname.includes('/mapa')) return 'smart-match';
   if (pathname.includes('/company')) return 'company';
@@ -284,8 +283,8 @@ function getCurrentPageFromPath(pathname: string): string {
 
 function getRoleBasedStyling(role: ProfileType): string {
   if (role === 'candidate') {
-    return 'bg-gradient-to-br from-emerald-50/30 to-blue-50/30';
+    return 'bg-gradient-to-br from-emerald-50/30 to-blue-50/30 dark:from-emerald-900/10 dark:to-blue-900/10';
   } else {
-    return 'bg-gradient-to-br from-blue-50/30 to-indigo-50/30';
+    return 'bg-gradient-to-br from-blue-50/30 to-indigo-50/30 dark:from-blue-900/10 dark:to-indigo-900/10';
   }
 }

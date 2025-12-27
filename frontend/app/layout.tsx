@@ -17,17 +17,28 @@ export const metadata: Metadata = {
   description: "Busqueda de empleo a un click",
 };
 
+import { ThemeProvider } from "@/app/components/ThemeProvider";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <ThemeToggle />
+        </ThemeProvider>
       </body>
     </html>
   );

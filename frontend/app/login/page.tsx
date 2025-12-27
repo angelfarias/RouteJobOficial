@@ -9,11 +9,7 @@ import { ArrowRight, Shield, Mail, Lock, Menu, X } from "lucide-react";
 import { auth } from "@/lib/firebaseClient";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { FormValidator } from "@/lib/validation";
-import { ErrorHandler } from "@/lib/utils/errorHandler";
 import PasswordInput from "@/app/components/PasswordInput";
-import { userSyncService } from "@/lib/services/userSynchronizationService";
-import { FirebaseDebugger } from "@/lib/utils/firebaseDebug";
-import { LoginDiagnostic } from "@/lib/utils/loginDiagnostic";
 import { UserManager } from "@/lib/utils/userManager";
 
 const FadeIn = ({
@@ -60,24 +56,31 @@ export default function LoginPage() {
       // Clean up URL
       window.history.replaceState({}, '', '/login');
     }
-  }, []);
 
-  // Real-time validation
-  useEffect(() => {
-    if (email || password) {
-      const validation = FormValidator.validateLoginForm({ email, password });
-      setValidationErrors(validation.errors);
+    // Prefetch dashboard for faster transition
+    router.prefetch('/dashboard');
+  }, [router]);
+
+  const validateField = (field: 'email' | 'password') => {
+    const validation = FormValidator.validateLoginForm({ email, password });
+    if (validation.errors[field]) {
+      setValidationErrors(prev => ({ ...prev, [field]: validation.errors[field] }));
+    } else {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
-  }, [email, password]);
+  };
 
   const isFormComplete = () => {
-    const validation = FormValidator.validateLoginForm({ email, password });
-    return validation.isValid && email.trim() && password.trim();
+    return email.trim() !== "" && password.trim() !== "";
   };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form before submission
     const validation = FormValidator.validateLoginForm({ email, password });
     if (!validation.isValid) {
@@ -88,43 +91,32 @@ export default function LoginPage() {
     setLoading(true);
     setErr(null);
     setInfo(null);
-    
+
     try {
-      console.log('🔍 Attempting Firebase authentication only...');
-      
-      // Step 1: Try to login with Firebase Auth only
-      let userCredential;
-      try {
-        userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
-        console.log('✅ Login successful:', userCredential.user.uid);
-        setInfo('Login exitoso. Redirigiendo...');
-      } catch (loginError: any) {
-        console.log('❌ Login failed, trying to create account:', loginError.code);
-        
-        if (loginError.code === 'auth/user-not-found' || loginError.code === 'auth/invalid-credential') {
-          // User doesn't exist, create account
-          const result = await UserManager.loginOrRegister(email.trim(), password);
-          if (result.success) {
-            setInfo(`${result.message}. Redirigiendo...`);
-          } else {
-            throw new Error(result.message);
-          }
-        } else {
-          throw loginError;
-        }
-      }
-      
-      // Step 2: Skip Firestore sync for now (due to permission issues)
-      console.log('⚠️ Skipping Firestore sync due to permission issues');
-      
-      // Step 3: Redirect to dashboard
-      setTimeout(() => {
+      // Use UserManager to handle the "Magic Login" flow (Login if exists, Register if not)
+      // This avoids redundant network requests and centralizes the logic.
+      const result = await UserManager.loginOrRegister(email.trim(), password);
+
+      if (result.success) {
+        setInfo(result.action === 'register'
+          ? 'Cuenta creada exitosamente. Redirigiendo...'
+          : 'Login exitoso. Redirigiendo...');
+
+        // Immediate redirect
         router.replace("/dashboard");
-      }, 1000);
-      
+        return;
+      } else {
+        // Handle expected login failures (e.g. wrong password, user not found)
+        // Set error directly to avoid console.error in catch block
+        setErr(result.message);
+        setShowRetryButton(true);
+        setLoading(false);
+        return;
+      }
+
     } catch (e: any) {
       console.error('❌ Authentication error:', e);
-      
+
       // Handle specific Firebase Auth errors
       let errorMessage = 'Error de autenticación';
       if (e.code) {
@@ -147,23 +139,22 @@ export default function LoginPage() {
       } else {
         errorMessage = e.message || 'Error inesperado';
       }
-      
+
       setErr(errorMessage);
       setShowRetryButton(true);
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen flex flex-col bg-white text-zinc-900 overflow-x-hidden selection:bg-emerald-100 selection:text-emerald-900">
+    <main className="min-h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-x-hidden selection:bg-emerald-100 selection:text-emerald-900">
       {/* BACKGROUND PATTERN */}
       <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
+        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
       </div>
 
       {/* NAVBAR */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 backdrop-blur-xl border-b border-zinc-200/50 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50 shadow-sm">
         <div className="mx-auto max-w-7xl h-full px-6 flex items-center justify-between">
           <div
             className="flex items-center gap-2 cursor-pointer"
@@ -174,7 +165,7 @@ export default function LoginPage() {
                 src="/logo.png"
                 alt="RouteJob Logo"
                 fill
-                className="object-contain object-left"
+                className="object-contain object-left dark:invert dark:hue-rotate-180"
                 priority
               />
             </div>
@@ -182,13 +173,13 @@ export default function LoginPage() {
 
           <Link
             href="/"
-            className="hidden sm:inline-flex text-sm font-semibold text-zinc-700 hover:text-zinc-900 transition-colors px-4 py-2 rounded-xl hover:bg-zinc-100"
+            className="hidden sm:inline-flex text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors px-4 py-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             ← Home
           </Link>
 
           <button
-            className="sm:hidden p-2 text-zinc-600"
+            className="sm:hidden p-2 text-zinc-600 dark:text-zinc-400"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X /> : <Menu />}
@@ -199,18 +190,18 @@ export default function LoginPage() {
           <motion.div
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="sm:hidden absolute top-full left-0 right-0 bg-white border-b border-zinc-100 p-4 flex flex-col gap-3 shadow-xl"
+            className="sm:hidden absolute top-full left-0 right-0 bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 p-4 flex flex-col gap-3 shadow-xl"
           >
             <Link
               href="/"
-              className="text-sm font-medium text-zinc-800 py-2 border-b border-zinc-50"
+              className="text-sm font-medium text-zinc-800 dark:text-zinc-200 py-2 border-b border-zinc-50 dark:border-zinc-800"
             >
               Home
             </Link>
             <div className="flex flex-col gap-2 mt-2">
               <Link
                 href="/login"
-                className="w-full py-2.5 rounded-xl bg-zinc-100 text-sm font-semibold text-zinc-900 text-center"
+                className="w-full py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-sm font-semibold text-zinc-900 dark:text-zinc-100 text-center"
               >
                 Iniciar sesión
               </Link>
@@ -229,12 +220,12 @@ export default function LoginPage() {
       <section className="pt-24 pb-16 flex items-center justify-center px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-4rem)]">
         <div className="w-full max-w-md">
           <FadeIn>
-            <div className="relative bg-white/90 backdrop-blur-xl rounded-2xl border border-zinc-200 shadow-xl p-6 sm:p-7 max-w-sm mx-auto">
+            <div className="relative bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl p-6 sm:p-7 max-w-sm mx-auto">
               <div className="text-center mb-5">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-zinc-900 via-zinc-900 to-emerald-600 bg-clip-text text-transparent mb-1 leading-tight">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-zinc-900 via-zinc-900 to-emerald-600 dark:from-zinc-100 dark:via-zinc-100 dark:to-emerald-400 bg-clip-text text-transparent mb-1 leading-tight">
                   ¡Bienvenido!
                 </h1>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Ingresa a tu cuenta en segundos
                 </p>
               </div>
@@ -244,19 +235,17 @@ export default function LoginPage() {
                   {/* Email Field */}
                   <div>
                     <div className="relative group">
-                      <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors z-10 ${
-                        validationErrors.email 
-                          ? 'text-red-500 group-focus-within:text-red-600' 
-                          : 'text-emerald-500 group-focus-within:text-emerald-600'
-                      }`} />
+                      <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors z-10 ${validationErrors.email
+                        ? 'text-red-500 group-focus-within:text-red-600'
+                        : 'text-emerald-500 group-focus-within:text-emerald-600'
+                        }`} />
                       <input
                         type="email"
                         placeholder="Correo electrónico"
-                        className={`w-full pl-9 pr-3 py-2.5 bg-white/60 backdrop-blur-sm border rounded-xl text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 transition-all hover:border-zinc-300 ${
-                          validationErrors.email 
-                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500/60' 
-                            : 'border-zinc-200 focus:ring-emerald-500 focus:border-emerald-500/60'
-                        }`}
+                        className={`w-full pl-9 pr-3 py-2.5 bg-white/60 dark:bg-zinc-800/60 backdrop-blur-sm border rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition-all hover:border-zinc-300 dark:hover:border-zinc-600 ${validationErrors.email
+                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500/60'
+                          : 'border-zinc-200 dark:border-zinc-700 focus:ring-emerald-500 focus:border-emerald-500/60'
+                          }`}
                         value={email}
                         onChange={(e) => {
                           setEmail(e.target.value);
@@ -266,6 +255,7 @@ export default function LoginPage() {
                             setShowRetryButton(false);
                           }
                         }}
+                        onBlur={() => validateField('email')}
                         required
                       />
                     </div>
@@ -277,11 +267,10 @@ export default function LoginPage() {
                   {/* Password Field */}
                   <div>
                     <div className="relative group">
-                      <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors z-10 ${
-                        validationErrors.password 
-                          ? 'text-red-500 group-focus-within:text-red-600' 
-                          : 'text-emerald-500 group-focus-within:text-emerald-600'
-                      }`} />
+                      <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors z-10 ${validationErrors.password
+                        ? 'text-red-500 group-focus-within:text-red-600'
+                        : 'text-emerald-500 group-focus-within:text-emerald-600'
+                        }`} />
                       <PasswordInput
                         placeholder="Contraseña"
                         value={password}
@@ -293,6 +282,7 @@ export default function LoginPage() {
                             setShowRetryButton(false);
                           }
                         }}
+                        onBlur={() => validateField('password')}
                         hasError={!!validationErrors.password}
                         required
                         size="md"
@@ -306,7 +296,7 @@ export default function LoginPage() {
                 </div>
 
                 {err && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-xs">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-3 text-red-700 dark:text-red-400 text-xs">
                     <p>{err}</p>
                     {showRetryButton && (
                       <button
@@ -324,7 +314,7 @@ export default function LoginPage() {
                 )}
 
                 {info && (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-green-700 text-xs">
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-xl p-3 text-green-700 dark:text-green-400 text-xs">
                     {info}
                   </div>
                 )}
@@ -332,18 +322,16 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={loading || !isFormComplete()}
-                  className={`group relative w-full py-2.5 text-sm font-bold rounded-xl overflow-hidden flex items-center justify-center gap-2 transition-all ${
-                    isFormComplete() && !loading
-                      ? "bg-zinc-900 text-white hover:bg-zinc-800 hover:scale-[1.02] shadow-lg shadow-zinc-900/15 active:scale-95"
-                      : "bg-zinc-100 text-zinc-500 cursor-not-allowed"
-                  }`}
+                  className={`group relative w-full py-2.5 text-sm font-bold rounded-xl overflow-hidden flex items-center justify-center gap-2 transition-all ${isFormComplete() && !loading
+                    ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 hover:scale-[1.02] shadow-lg shadow-zinc-900/15 active:scale-95"
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 cursor-not-allowed"
+                    }`}
                 >
                   <div
-                    className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-700 ${
-                      isFormComplete() && !loading
-                        ? "group-hover:translate-x-full"
-                        : ""
-                    }`}
+                    className={`absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full transition-transform duration-700 ${isFormComplete() && !loading
+                      ? "group-hover:translate-x-full"
+                      : ""
+                      }`}
                   />
                   <span className="relative z-10">
                     {loading ? "Ingresando..." : "Iniciar sesión"}
@@ -356,10 +344,10 @@ export default function LoginPage() {
 
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-zinc-200" />
+                  <div className="w-full border-t border-zinc-200 dark:border-zinc-700" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-3 bg-white text-zinc-400 font-medium">
+                  <span className="px-3 bg-white dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 font-medium">
                     o
                   </span>
                 </div>
@@ -368,25 +356,25 @@ export default function LoginPage() {
               <div className="space-y-2 text-center">
                 <Link
                   href="/forgot-password"
-                  className="block w-full text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-all py-2 px-3 border border-emerald-200/60 rounded-xl hover:border-emerald-300 hover:bg-emerald-50"
+                  className="block w-full text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-all py-2 px-3 border border-emerald-200/60 dark:border-emerald-800/60 rounded-xl hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
 
                 <Link
                   href="/register"
-                  className="block w-full text-xs font-semibold text-zinc-700 hover:text-zinc-900 transition-all py-2 px-3 border-2 border-zinc-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50"
+                  className="block w-full text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-all py-2 px-3 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
                 >
                   Crear nueva cuenta
                 </Link>
-                
-              
+
+
               </div>
 
-              <div className="flex items-center justify-center gap-4 mt-5 pt-4 border-t border-zinc-100">
+              <div className="flex items-center justify-center gap-4 mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                 <div className="flex items-center gap-1.5 text-[11px]">
                   <Shield className="w-3.5 h-3.5 text-emerald-500" />
-                  <span className="text-zinc-500 font-medium">Seguro</span>
+                  <span className="text-zinc-500 dark:text-zinc-400 font-medium">Seguro</span>
                 </div>
 
               </div>
@@ -394,15 +382,15 @@ export default function LoginPage() {
           </FadeIn>
         </div>
       </section>
-                  {/* FOOTER SIMPLE */}
-      <footer className="border-t border-zinc-100 pt-16 pb-8 bg-white/50 backdrop-blur-sm">
+      {/* FOOTER SIMPLE */}
+      <footer className="border-t border-zinc-100 dark:border-zinc-800 pt-16 pb-8 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center text-sm text-zinc-400">
             <p>© {new Date().getFullYear()} RouteJob Inc. Santiago, Chile.</p>
             <div className="flex gap-4 mt-4 md:mt-0">
-              <div className="w-5 h-5 bg-zinc-200 rounded-full hover:bg-emerald-500 transition-colors cursor-pointer" />
-              <div className="w-5 h-5 bg-zinc-200 rounded-full hover:bg-emerald-500 transition-colors cursor-pointer" />
-              <div className="w-5 h-5 bg-zinc-200 rounded-full hover:bg-emerald-500 transition-colors cursor-pointer" />
+              <div className="w-5 h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full hover:bg-emerald-500 transition-colors cursor-pointer" />
+              <div className="w-5 h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full hover:bg-emerald-500 transition-colors cursor-pointer" />
+              <div className="w-5 h-5 bg-zinc-200 dark:bg-zinc-800 rounded-full hover:bg-emerald-500 transition-colors cursor-pointer" />
             </div>
           </div>
         </div>

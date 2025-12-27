@@ -25,7 +25,7 @@ export default function CategoryFilter({
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedCategoryDetails, setSelectedCategoryDetails] = useState<Category[]>([]);
-  
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -89,7 +89,7 @@ export default function CategoryFilter({
         console.error('Error searching categories:', error);
         // If search fails, show empty results but don't break the component
         setSearchResults([]);
-        
+
         // Optionally show a user-friendly message
         if (error instanceof Error && error.message.includes('Failed to search categories')) {
           console.warn('Categories service may not be available. Using fallback.');
@@ -140,13 +140,12 @@ export default function CategoryFilter({
           type="button"
           onClick={() => handleCategoryToggle(node.category.id)}
           disabled={!canSelect && !isSelected}
-          className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-            isSelected
-              ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+          className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${isSelected
+              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
               : canSelect
-              ? 'hover:bg-zinc-100 text-zinc-700'
-              : 'text-zinc-400 cursor-not-allowed'
-          }`}
+                ? 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                : 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+            }`}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -182,7 +181,7 @@ export default function CategoryFilter({
           {selectedCategoryDetails.map(category => (
             <span
               key={category.id}
-              className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-medium border border-emerald-200"
+              className="inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 px-3 py-1 rounded-full text-xs font-medium border border-emerald-200 dark:border-emerald-800"
             >
               {category.name}
               <button
@@ -207,7 +206,7 @@ export default function CategoryFilter({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsOpen(true)}
-          className="w-full px-4 py-2 border border-zinc-200 rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          className="w-full px-4 py-2 border border-zinc-200 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
         />
         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
           {loading ? (
@@ -227,11 +226,11 @@ export default function CategoryFilter({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-zinc-200 rounded-xl shadow-lg max-h-96 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg dark:shadow-none max-h-96 overflow-y-auto">
           {/* Search Results */}
           {searchQuery.trim().length >= 2 && (
-            <div className="p-3 border-b border-zinc-100">
-              <h4 className="text-xs font-semibold text-zinc-600 mb-2">
+            <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
+              <h4 className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-2">
                 Resultados de búsqueda
               </h4>
               {searchResults.length > 0 ? (
@@ -239,20 +238,19 @@ export default function CategoryFilter({
                   {searchResults.map(category => {
                     const isSelected = selectedCategories.includes(category.id);
                     const canSelect = !isSelected && selectedCategories.length < maxSelections;
-                    
+
                     return (
                       <button
                         key={category.id}
                         type="button"
                         onClick={() => handleCategoryToggle(category.id)}
                         disabled={!canSelect && !isSelected}
-                        className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                          isSelected
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${isSelected
+                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                             : canSelect
-                            ? 'hover:bg-zinc-100 text-zinc-700'
-                            : 'text-zinc-400 cursor-not-allowed'
-                        }`}
+                              ? 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                              : 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <div>
@@ -284,28 +282,27 @@ export default function CategoryFilter({
 
           {/* Popular Categories */}
           {showPopular && popularCategories.length > 0 && searchQuery.trim().length < 2 && (
-            <div className="p-3 border-b border-zinc-100">
-              <h4 className="text-xs font-semibold text-zinc-600 mb-2">
+            <div className="p-3 border-b border-zinc-100 dark:border-zinc-800">
+              <h4 className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-2">
                 Categorías populares
               </h4>
               <div className="space-y-1">
                 {popularCategories.map(category => {
                   const isSelected = selectedCategories.includes(category.id);
                   const canSelect = !isSelected && selectedCategories.length < maxSelections;
-                  
+
                   return (
                     <button
                       key={category.id}
                       type="button"
                       onClick={() => handleCategoryToggle(category.id)}
                       disabled={!canSelect && !isSelected}
-                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                        isSelected
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${isSelected
+                          ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                           : canSelect
-                          ? 'hover:bg-zinc-100 text-zinc-700'
-                          : 'text-zinc-400 cursor-not-allowed'
-                      }`}
+                            ? 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                            : 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{category.name}</span>
@@ -330,7 +327,7 @@ export default function CategoryFilter({
           {/* Category Tree */}
           {searchQuery.trim().length < 2 && (
             <div className="p-3">
-              <h4 className="text-xs font-semibold text-zinc-600 mb-2">
+              <h4 className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-2">
                 Todas las categorías
               </h4>
               <div className="space-y-1 max-h-64 overflow-y-auto">
