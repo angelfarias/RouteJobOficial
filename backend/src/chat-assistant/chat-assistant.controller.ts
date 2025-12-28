@@ -13,7 +13,7 @@ import { ChatAssistantService } from './chat-assistant.service';
 
 @Controller('chat-assistant')
 export class ChatAssistantController {
-  constructor(private readonly service: ChatAssistantService) {}
+  constructor(private readonly service: ChatAssistantService) { }
 
   @Post('respuesta')
   async guardar(
@@ -46,12 +46,12 @@ export class ChatAssistantController {
     @Body('userId') userId: string,
     @Body('paso') paso: string,
   ) {
-    await this.service.guardarAudio({
+    const result = await this.service.guardarAudio({
       userId,
       paso: Number(paso),
       file,
     });
-    return { ok: true };
+    return { ok: true, ...result };
   }
 
   // Enhanced profile analysis endpoints

@@ -68,7 +68,7 @@ export default function PerfilPage() {
   const fetchProfileData = async (uid: string) => {
     const API_URL = getApiUrl();
     try {
-      const resp = await fetch(`${API_URL}/chat-assistant/perfil?userId=${uid}`);
+      const resp = await fetch(`${API_URL}/chat-assistant/perfil?userId=${uid}&t=${Date.now()}`);
       if (!resp.ok) throw new Error("Failed to fetch profile");
       const json = await resp.json();
       const perfilApi: PerfilApi | null = json.perfil || null;
@@ -101,6 +101,20 @@ export default function PerfilPage() {
       }
 
       setCandidato(json.candidato || null);
+
+      // Fetch candidate data separately to ensure we have the processed profile (skills, etc.)
+      try {
+        const respCand = await fetch(`${API_URL}/candidates/perfil?uid=${uid}`);
+        if (respCand.ok) {
+          const jsonCand = await respCand.json();
+          if (jsonCand.candidato) {
+            setCandidato(jsonCand.candidato);
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching candidate profile:", e);
+      }
+
     } catch (error) {
       console.error("Error fetching profile:", error);
     }
@@ -138,20 +152,7 @@ export default function PerfilPage() {
     }
   }, [respuestas]);
 
-  // detección micrófono
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition || !navigator.mediaDevices?.getUserMedia) {
-      setMicSupported(false);
-      return;
-    }
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => stream.getTracks().forEach((t) => t.stop()))
-      .catch(() => setMicSupported(false));
-  }, []);
+
 
   if (loading) {
     return (
@@ -177,12 +178,12 @@ export default function PerfilPage() {
     "";
   const educacion = r[5]?.respuesta || "";
   const formacionExtra = r[6]?.respuesta || "";
-  const skillsTexto = candidato?.skills?.join(", ") || "";
+  const skillsTexto = candidato?.skills?.join(", ") || [r[3]?.respuesta, r[4]?.respuesta].filter(Boolean).join(", ") || "";
 
   // --- funciones asistente ---
   const API_URL = getApiUrl();
   const guardarPaso = async (pasoActual: number, texto: string) => {
-    if (!texto.trim() || !user) return;
+    if (!user) return;
 
     setRespuestas((prev) => {
       const nuevas = [...prev];
@@ -213,6 +214,7 @@ export default function PerfilPage() {
   };
 
   const irAPaso = (nuevoPaso: number) => {
+    console.log(`irAPaso: ${nuevoPaso}. Respuestas[${nuevoPaso}]:`, respuestas[nuevoPaso]);
     setPaso(nuevoPaso);
     setMensaje(respuestas[nuevoPaso] || "");
   };
@@ -239,37 +241,7 @@ export default function PerfilPage() {
       const textoInicial = mensaje; // Capture text before recording
 
       try {
-        // 1. Setup Speech Recognition
-        const recognition = new SpeechRecognition();
-        recognition.lang = "es-ES";
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
-
-        recognition.onstart = () => {
-          console.log('🎤 Speech recognition started event');
-          setIsListening(true);
-        };
-        recognition.onend = () => {
-          console.log('mic Speech recognition ended event');
-          setIsListening(false);
-        };
-        recognition.onerror = (event: any) => {
-          console.error('Speech recognition error event:', event.error);
-          setIsListening(false);
-        };
-
-        recognition.onresult = (event: any) => {
-          if (!event.results) return;
-          let transcript = "";
-          for (let i = 0; i < event.results.length; ++i) {
-            transcript += event.results[i][0].transcript;
-          }
-          console.log("Transcription result:", transcript);
-          setMensaje((textoInicial ? textoInicial + " " : "") + transcript);
-        };
-
-        // 2. Setup MediaRecorder
+        // 1. Setup MediaRecorder
         console.log("Requesting microphone stream...");
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log("Microphone stream obtained");
@@ -295,7 +267,16 @@ export default function PerfilPage() {
             });
 
             if (resp.ok) {
-              console.log("Audio uploaded successfully");
+              const data = await resp.json();
+              console.log("Audio uploaded successfully", data);
+
+              if (data.transcript) {
+                console.log("Server transcription received:", data.transcript);
+                const transcript = data.transcript;
+                const capitalizedTranscript = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+                setMensaje((textoInicial ? textoInicial + " " : "") + capitalizedTranscript);
+              }
+
               // Refresh profile to ensure we have the correct URL
               await fetchProfileData(user.uid);
             } else {
@@ -304,17 +285,14 @@ export default function PerfilPage() {
           } catch (error) {
             console.error("Error uploading audio:", error);
           }
+          setIsListening(false); // Stop listening effect
         };
 
         console.log("Starting MediaRecorder...");
         mediaRecorder.start();
         setMediaRecorderRef(mediaRecorder);
-
-        console.log("Starting SpeechRecognition...");
-        recognition.start();
-
         setIsRecording(true);
-        (window as any)._routejob_recognition = recognition;
+        setIsListening(true); // Show listening UI while recording
 
       } catch (err) {
         console.error("Error in toggleRecording:", err);
@@ -323,13 +301,11 @@ export default function PerfilPage() {
       }
     } else {
       console.log("Stopping recording...");
-      const recognition = (window as any)._routejob_recognition;
-      if (recognition) recognition.stop();
       if (mediaRecorderRef && mediaRecorderRef.state !== "inactive") {
         mediaRecorderRef.stop();
       }
       setIsRecording(false);
-      setIsListening(false);
+      // setIsListening will be set to false in onstop
     }
   };
 
@@ -507,6 +483,7 @@ export default function PerfilPage() {
             </div>
 
             <textarea
+              key={paso}
               id="respuesta-textarea"
               name="respuesta"
               data-gramm="false"

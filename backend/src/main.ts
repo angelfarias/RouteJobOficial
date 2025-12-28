@@ -4,7 +4,11 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as dotenv from 'dotenv';
 
-dotenv.config();
+import * as path from 'path';
+import * as fs from 'fs';
+
+const envPath = path.resolve(__dirname, '../.env');
+dotenv.config({ path: envPath });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

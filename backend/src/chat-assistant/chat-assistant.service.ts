@@ -3,10 +3,13 @@ import { Inject, Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { CategoriesService } from '../categories/categories.service';
 
+import { SpeechClient } from '@google-cloud/speech';
+
 @Injectable()
 export class ChatAssistantService {
   private db: FirebaseFirestore.Firestore;
   private storage: admin.storage.Storage;
+  private speechClient: SpeechClient;
 
   constructor(
     @Inject('FIREBASE_ADMIN') private readonly app: admin.app.App,
@@ -14,6 +17,14 @@ export class ChatAssistantService {
   ) {
     this.db = this.app.firestore();
     this.storage = this.app.storage();
+
+    const apiKey = process.env.GOOGLE_SPEECH_API_KEY;
+    console.log('ChatAssistantService initialized. API Key present:', !!apiKey);
+    if (apiKey) {
+      this.speechClient = new SpeechClient({ apiKey });
+    } else {
+      console.warn('WARNING: GOOGLE_SPEECH_API_KEY is missing. Transcription will not work.');
+    }
   }
 
   async guardarRespuesta(params: {
@@ -62,29 +73,24 @@ export class ChatAssistantService {
   }
 
   async sincronizarPerfilDesdeSession(userId: string) {
-    const doc = await this.db.collection('assistant_sessions').doc(userId).get();
-    if (!doc.exists) return;
-
-    const session = doc.data() as any;
-    const respuestas = session.respuestas || {};
-
-    const experience = Object.keys(respuestas)
-      .sort((a, b) => Number(a) - Number(b))
-      .map((k) => (respuestas[k]?.respuesta || '').trim())
-      .filter((txt) => txt.length > 0);
-
-    const profileCompleted = experience.length > 0; // criterio sencillo
+    const profileData = await this.analyzeProfileData(userId);
+    if (!profileData) return;
 
     await this.db.collection('candidates').doc(userId).set(
       {
-        experience,
-        profileCompleted,
+        experience: profileData.experience.map(e => e.company ? `${e.title} at ${e.company}` : e.title), // Simple string array for compatibility
+        skills: [...profileData.skills.technical, ...profileData.skills.soft],
+        profileCompleted: profileData.completenessScore > 50,
+        // Store full structured data too if needed, but for now keep compatibility
+        structuredExperience: profileData.experience,
+        structuredEducation: profileData.education,
+        objective: profileData.objective,
       },
       { merge: true },
     );
   }
-  // NUEVO: guardar audio asociado a un paso
-  // chat-assistant.service.ts
+
+  // NUEVO: guardar audio asociado a un paso y transcribirlo
   async guardarAudio(params: {
     userId: string;
     paso: number;
@@ -119,23 +125,93 @@ export class ChatAssistantService {
       expires: '2100-01-01',
     });
 
-    // 3) guardar nuevo storagePath + url en Firestore
-    await docRef.set(
-      {
-        userId,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        audios: {
-          [paso]: {
-            storagePath: filename,
-            url,
-          },
+    // 3) Transcribir el audio usando Google Cloud Speech-to-Text
+    let transcript = '';
+    try {
+      transcript = await this.transcribeAudio(file.buffer);
+      console.log(`Transcription for step ${paso}: ${transcript}`);
+    } catch (error) {
+      console.error('Error transcribing audio:', error);
+      // No fallamos todo el proceso si la transcripción falla, pero lo logueamos
+    }
+
+    // 4) guardar nuevo storagePath + url + transcripción en Firestore
+    const updateData: any = {
+      userId,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      audios: {
+        [paso]: {
+          storagePath: filename,
+          url,
+          transcript, // Guardamos la transcripción
         },
       },
-      { merge: true },
-    );
+    };
 
-    // opcional: devolver la url al frontend
-    return { url };
+    // Si hay transcripción, también actualizamos la respuesta de texto automáticamente
+    if (transcript) {
+      updateData.respuestas = {
+        [paso]: {
+          respuesta: transcript,
+          // Mantenemos la pregunta si ya existía, o ponemos una genérica si no
+          pregunta: data.respuestas?.[paso]?.pregunta || `Pregunta ${paso}`,
+        }
+      };
+    }
+
+    await docRef.set(updateData, { merge: true });
+
+    // devolver la url y la transcripción al frontend
+    return { url, transcript };
+  }
+
+  private async transcribeAudio(audioBuffer: Buffer): Promise<string> {
+    const apiKey = process.env.GOOGLE_SPEECH_API_KEY;
+    if (!apiKey) {
+      console.warn('WARNING: GOOGLE_SPEECH_API_KEY is missing.');
+      return '';
+    }
+
+    const audioBytes = audioBuffer.toString('base64');
+    const url = `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`;
+
+    const body = {
+      config: {
+        encoding: 'WEBM_OPUS',
+        sampleRateHertz: 48000,
+        languageCode: 'es-ES',
+        enableAutomaticPunctuation: true,
+      },
+      audio: {
+        content: audioBytes,
+      },
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Google Speech API Error:', JSON.stringify(data, null, 2));
+        return '';
+      }
+
+      const transcription = data.results
+        ?.map((result: any) => result.alternatives?.[0]?.transcript)
+        .join('\n');
+
+      return transcription || '';
+    } catch (error) {
+      console.error('Fetch Error calling Google Speech API:', error);
+      return '';
+    }
   }
 
   /**
@@ -277,19 +353,27 @@ export class ChatAssistantService {
 
     // Technical skills (response 3)
     if (responses[3]?.respuesta) {
-      const techSkills = responses[3].respuesta
-        .split(/[,\n]/)
-        .map(s => s.trim())
-        .filter(s => s.length > 1);
+      const text = responses[3].respuesta;
+      let techSkills = text.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 1);
+
+      // Fallback: if splitting didn't work but there is text, take the whole text
+      if (techSkills.length === 0 && text.trim().length > 1) {
+        techSkills = [text.trim()];
+      }
+
       technical.push(...techSkills);
     }
 
     // Soft skills (response 4)
     if (responses[4]?.respuesta) {
-      const softSkills = responses[4].respuesta
-        .split(/[,\n]/)
-        .map(s => s.trim())
-        .filter(s => s.length > 1);
+      const text = responses[4].respuesta;
+      let softSkills = text.split(/[,\n]/).map(s => s.trim()).filter(s => s.length > 1);
+
+      // Fallback
+      if (softSkills.length === 0 && text.trim().length > 1) {
+        softSkills = [text.trim()];
+      }
+
       soft.push(...softSkills);
     }
 
