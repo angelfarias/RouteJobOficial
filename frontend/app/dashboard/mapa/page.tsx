@@ -521,7 +521,7 @@ export default function MapaVacantesPage() {
           </p>
           <button
             type="button"
-            onClick={() => router.push("/dashboard/perfil")}
+            onClick={() => router.push("/dashboard/perfil/smart")}
             className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400"
           >
             Ir a completar mi perfil

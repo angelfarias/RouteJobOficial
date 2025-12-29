@@ -11,6 +11,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { FormValidator } from "@/lib/validation";
 import PasswordInput from "@/app/components/PasswordInput";
 import { UserManager } from "@/lib/utils/userManager";
+import DynamicBackground from "@/app/components/DynamicBackground";
 
 const FadeIn = ({
   children,
@@ -148,10 +149,8 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 overflow-x-hidden selection:bg-emerald-100 selection:text-emerald-900">
-      {/* BACKGROUND PATTERN */}
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
-      </div>
+      {/* DYNAMIC BACKGROUND */}
+      <DynamicBackground />
 
       {/* NAVBAR */}
       <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50 shadow-sm">

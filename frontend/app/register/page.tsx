@@ -14,6 +14,7 @@ import PasswordInput from "@/app/components/PasswordInput";
 import { ErrorHandler } from "@/lib/utils/errorHandler";
 import { userSyncService } from "@/lib/services/userSynchronizationService";
 import { companySyncService } from "@/lib/services/companySynchronizationService";
+import DynamicBackground from "@/app/components/DynamicBackground";
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -111,7 +112,7 @@ export default function RegisterPage() {
 
       if (userType === 'company') {
         setInfo(
-          "¡Cuenta de empresa creada exitosamente! 🎉 Tu perfil empresarial ha sido configurado. Revisa tu correo y valida tu email. Serás redirigido al panel de empresa en unos segundos..."
+          "¡Cuenta de empresa creada exitosamente! 🎉 Tu perfil empresarial ha sido configurado. Serás redirigido al panel de empresa en unos segundos..."
         );
 
         // Redirect to company panel after successful registration
@@ -120,12 +121,12 @@ export default function RegisterPage() {
         }, 4000);
       } else {
         setInfo(
-          "¡Cuenta creada exitosamente! 🎉 Tu perfil ha sido configurado. Revisa tu correo y valida tu email. Serás redirigido al login en unos segundos..."
+          "¡Cuenta creada exitosamente! 🎉 Tu perfil ha sido configurado. Serás redirigido al dashboard en unos segundos..."
         );
 
-        // Redirect to login after successful registration
+        // Redirect to dashboard after successful registration (automatic login)
         setTimeout(() => {
-          router.replace("/login?registered=true");
+          router.replace("/dashboard");
         }, 4000);
       }
 
@@ -180,10 +181,8 @@ export default function RegisterPage() {
         </div>
       </header>
 
-      {/* BACKGROUND PATTERN */}
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#3f3f46_1px,transparent_1px)] bg-size-[16px_16px] mask-[radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-60" />
-      </div>
+      {/* DYNAMIC BACKGROUND */}
+      <DynamicBackground />
 
       {/* REGISTER SECTION (solo card, sin imagen lateral) */}
       <section className="pt-28 pb-20 flex items-center justify-center px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-5rem)]">
