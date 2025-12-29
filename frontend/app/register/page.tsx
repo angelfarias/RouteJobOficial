@@ -329,18 +329,9 @@ export default function RegisterPage() {
             </div>
 
             <div className="flex items-center justify-center gap-4 mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center gap-1.5 text-xs">
-                <Shield className="w-4 h-4 text-emerald-500" />
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium">Seguro</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium">Gratis</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs">
-                <Clock className="w-4 h-4 text-emerald-500" />
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium">30s</span>
-              </div>
+              
+              
+        
             </div>
           </div>
         </div>

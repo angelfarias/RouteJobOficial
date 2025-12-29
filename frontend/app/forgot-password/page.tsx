@@ -239,14 +239,8 @@ export default function ForgotPasswordPage() {
             </div>
 
             <div className="flex items-center justify-center gap-4 mt-5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-              <div className="flex items-center gap-1.5 text-[11px]">
-                <Shield className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium">Seguro</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[11px]">
-                <Clock className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-zinc-500 dark:text-zinc-400 font-medium">Instantáneo</span>
-              </div>
+              
+              
             </div>
           </div>
         </div>

@@ -42,11 +42,11 @@ export default function PasswordInput({
     lg: 'w-5 h-5'
   };
 
-  const baseClasses = `w-full bg-white/60 backdrop-blur-sm border rounded-xl text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 transition-all hover:border-zinc-300 ${sizeClasses[size]}`;
+  const baseClasses = `w-full bg-white/60 dark:bg-zinc-800/60 backdrop-blur-sm border rounded-xl text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 transition-all hover:border-zinc-300 dark:hover:border-zinc-600 ${sizeClasses[size]}`;
 
   const errorClasses = hasError
     ? 'border-red-300 focus:ring-red-500 focus:border-red-500/60'
-    : 'border-zinc-200 focus:ring-emerald-500 focus:border-emerald-500/60';
+    : 'border-zinc-200 dark:border-zinc-700 focus:ring-emerald-500 focus:border-emerald-500/60';
 
   return (
     <div className="relative">
